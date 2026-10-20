@@ -132,81 +132,37 @@
 
   <!-- Onglet 1: Studio Lyrics (Compteur de pieds) -->
   <div id="tabPaneStudio" class="tab-pane active">
-    <!-- Bandeau Dépliable : Code couleur des types de mots (Sous le header, déplié de base) -->
-    <div id="legendBarWrapper" class="legend-bar-wrapper">
-      <div id="legendToggleBtn" class="legend-bar-header" title="Cliquer pour afficher ou replier le code couleur">
-        <div class="legend-header-left">
-          <svg class="legend-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="16" x2="12" y2="12"></line>
-            <line x1="12" y1="8" x2="12.01" y2="8"></line>
-          </svg>
-          <span>Code couleur des mots</span>
-        </div>
-        <button class="legend-toggle-btn" aria-label="Replier ou déplier">
-          <svg class="chevron-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="6 9 12 15 18 9"></polyline>
-          </svg>
-        </button>
-      </div>
-
-      <div class="legend-content" id="legendContent">
-        <div class="legend-item">
-          <div class="word-chip">
-            <span class="chip-token">heu·reux</span>
-            <span class="chip-count">2</span>
-          </div>
-          <span class="legend-label"><strong>Mots standards</strong></span>
-        </div>
-        <div class="legend-item">
-          <div class="word-chip acronym">
-            <span class="chip-token">P·D·G</span>
-            <span class="chip-count">3</span>
-          </div>
-          <span class="legend-label"><strong>Sigles & Acronymes</strong></span>
-        </div>
-        <div class="legend-item">
-          <div class="word-chip number">
-            <span class="chip-token">14</span>
-            <span class="chip-count">2</span>
-          </div>
-          <span class="legend-label"><strong>Nombres</strong></span>
-        </div>
-      </div>
-    </div>
-
     <!-- Main Workspace -->
     <main class="workspace-container">
       <div class="editor-card">
-        <!-- Editor Top Stats Bar -->
-        <div class="editor-top-bar">
-          <div class="editor-info-left">
-            <div class="stat-pill">
-              <span>Vers :</span>
-              <strong id="statLineCount">0</strong>
-            </div>
-            <div class="stat-pill">
-              <span>Total pieds :</span>
-              <strong id="statSyllableCount">0</strong>
-            </div>
-            <div class="stat-pill">
-              <span>Moyenne/ligne :</span>
-              <strong id="statAvgCount">0</strong>
-            </div>
-          </div>
-          <div class="editor-info-right">
-            <label class="studio-toggle" title="Afficher ou masquer la décomposition détaillée des pieds mot par mot à droite de la ligne active">
-              <input type="checkbox" id="checkShowBreakdown" checked>
-              <span class="toggle-switch-slider"></span>
-              <span class="toggle-label">Détail des pieds</span>
-            </label>
-          </div>
-        </div>
-
         <!-- Line-by-Line Document Editor -->
         <div id="editorLinesContainer" class="editor-lines-container">
-          <!-- Rendu dynamique des lignes avec ligne de décomposition insérée -->
+          <!-- Rendu dynamique des lignes avec décomposition à droite -->
         </div>
+
+        <!-- Editor Bottom Status Bar (discrète et minimale) -->
+        <footer class="editor-status-bar">
+          <div class="status-bar-left">
+            <button id="btnZenMode" class="btn-status-action" title="Mode Zen plein écran (Alt + Z)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+              </svg>
+              <span>Mode Zen</span>
+            </button>
+          </div>
+          <div class="status-bar-right">
+            <div class="status-metrics">
+              <span id="statLineCount">0</span> vers · 
+              <span id="statSyllableCount">0</span> pieds · 
+              moy. <span id="statAvgCount">0</span>
+            </div>
+            <label class="studio-toggle" title="Afficher ou masquer la décomposition détaillée des pieds mot par mot">
+              <input type="checkbox" id="checkShowBreakdown" checked>
+              <span class="toggle-switch-slider"></span>
+              <span class="toggle-label">Détail</span>
+            </label>
+          </div>
+        </footer>
       </div>
     </main>
   </div>
@@ -565,13 +521,27 @@
             <span class="shortcut-keys"><span class="kbd">Alt</span> + <span class="kbd">↑ / ↓</span></span>
           </div>
           <div class="shortcut-item">
+            <span class="shortcut-desc">Mode Zen plein écran</span>
+            <span class="shortcut-keys"><span class="kbd">Alt</span> + <span class="kbd">Z</span></span>
+          </div>
+          <div class="shortcut-item">
             <span class="shortcut-desc">Sauvegarde manuelle immédiate</span>
             <span class="shortcut-keys"><span class="kbd">Ctrl</span> + <span class="kbd">S</span></span>
           </div>
         </div>
       </div>
 
-      <div style="font-size: 11px; color: var(--text-dim); text-align: center; border-top: 1px solid var(--border-subtle); padding-top: 10px;">
+      <!-- Section Code Couleur des Mots (Décomposition) -->
+      <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-subtle);">
+        <div class="shortcut-group-title" style="margin-bottom: 8px;">Code couleur des mots (Décomposition)</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 16px; font-size: 11.5px; color: var(--text-dim);">
+          <div><span style="color: #67e8f9; font-weight: 700;">Bleu Cyan</span> : Sigles &amp; Acronymes (P·D·G = 3)</div>
+          <div><span style="color: #fcd34d; font-weight: 700;">Ambre</span> : Nombres en chiffres (14 = 2)</div>
+          <div><span style="color: #cbd5e1; font-weight: 700;">Gris clair</span> : Mots standards</div>
+        </div>
+      </div>
+
+      <div style="font-size: 11px; color: var(--text-dim); text-align: center; border-top: 1px solid var(--border-subtle); padding-top: 10px; margin-top: 12px;">
         💡 <em>Astuce : taper Alt+&amp; sur une ligne vide insère [Couplet 1] et crée automatiquement la ligne suivante prête à écrire.</em>
       </div>
     </div>

@@ -206,21 +206,8 @@ J'écris mes textes à la plume`;
         totalSyllablesCount += count;
       }
 
-      // Couleur du badge de pieds
-      let meterClass = '';
-      if (count === 0) {
-        meterClass = 'empty';
-      } else if (count === 8) {
-        meterClass = 'meter-8';
-      } else if (count === 10) {
-        meterClass = 'meter-10';
-      } else if (count === 12) {
-        meterClass = 'meter-12';
-      } else if (count === 16) {
-        meterClass = 'meter-16';
-      } else if (count < 6) {
-        meterClass = 'meter-short';
-      }
+      // Marquer comme vide si aucun pied calculé
+      const meterClass = (count === 0) ? 'empty' : '';
 
       // Ligne de décomposition : uniquement sur la ligne active quand elle contient du texte, n'est pas un tag et que showBreakdown est activé
       let breakdownHtml = '';
@@ -230,7 +217,8 @@ J'écris mes textes à la plume`;
         }
 
         let chipsHtml = '';
-        for (const w of syllableResult.words) {
+        for (let idx = 0; idx < syllableResult.words.length; idx++) {
+          const w = syllableResult.words[idx];
           let extraClass = '';
 
           if (w.isAcronym) {
@@ -245,6 +233,9 @@ J'écris mes textes à la plume`;
               <span class="chip-count">${w.count}</span>
             </div>
           `;
+          if (idx < syllableResult.words.length - 1) {
+            chipsHtml += `<span class="chip-dot">·</span>`;
+          }
         }
 
         breakdownHtml = `
@@ -434,15 +425,8 @@ J'écris mes textes à la plume`;
             badge.textContent = 'TAG';
             badge.title = 'Tag de structure';
           } else {
-            let meterClass = '';
-            if (count === 0) meterClass = 'empty';
-            else if (count === 8) meterClass = 'meter-8';
-            else if (count === 10) meterClass = 'meter-10';
-            else if (count === 12) meterClass = 'meter-12';
-            else if (count === 16) meterClass = 'meter-16';
-            else if (count < 6) meterClass = 'meter-short';
-
-            badge.className = `syllable-badge ${meterClass}`;
+            const meterClass = (count === 0) ? 'empty' : '';
+            badge.className = `syllable-badge ${meterClass}`.trim();
             badge.textContent = count > 0 ? count : '';
             badge.title = count > 0 ? `${count} pieds (clic pour modifier)` : 'Clic pour fixer les pieds';
           }
@@ -456,7 +440,8 @@ J'écris mes textes à la plume`;
           let breakdownEl = main.querySelector('.line-breakdown');
           if (showBreakdown && lineText.trim().length > 0 && !isTag) {
             let chipsHtml = '';
-            for (const w of syllableResult.words) {
+            for (let idx = 0; idx < syllableResult.words.length; idx++) {
+              const w = syllableResult.words[idx];
               let extraClass = '';
               if (w.isAcronym) extraClass = 'acronym';
               else if (w.isNumber) extraClass = 'number';
@@ -467,6 +452,9 @@ J'écris mes textes à la plume`;
                   <span class="chip-count">${w.count}</span>
                 </div>
               `;
+              if (idx < syllableResult.words.length - 1) {
+                chipsHtml += `<span class="chip-dot">·</span>`;
+              }
             }
 
             if (!breakdownEl) {
@@ -1702,7 +1690,7 @@ J'écris mes textes à la plume`;
       }
     });
 
-    // Raccourci Ctrl+S pour sauvegarder manuellement
+    // Raccourcis globaux
     document.addEventListener('keydown', (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
@@ -1712,13 +1700,35 @@ J'écris mes textes à la plume`;
           saveSongs();
           showToast('Enregistré manuellement !');
         }
+      } else if (e.altKey && (e.key === 'z' || e.key === 'Z')) {
+        e.preventDefault();
+        toggleZenMode();
       } else if (e.key === 'Escape') {
+        if (document.body.classList.contains('zen-mode')) {
+          document.body.classList.remove('zen-mode');
+          showToast('Mode Zen désactivé');
+          return;
+        }
         // Touche Echap pour fermer les modals et dropdowns
         if (shortcutsModal) shortcutsModal.classList.remove('open');
         if (projectsModal) closeProjectsModal();
         if (exportDropdown) exportDropdown.classList.remove('open');
       }
     });
+
+    // Mode Zen (Focus plein écran Alt+Z)
+    const btnZenMode = document.getElementById('btnZenMode');
+    function toggleZenMode() {
+      const isZen = document.body.classList.toggle('zen-mode');
+      if (isZen) {
+        showToast('Mode Zen activé (Échap ou Alt+Z pour quitter)');
+      } else {
+        showToast('Mode Zen désactivé');
+      }
+    }
+    if (btnZenMode) {
+      btnZenMode.addEventListener('click', toggleZenMode);
+    }
 
     // Modal Raccourcis Clavier
     const btnOpenShortcuts = document.getElementById('btnOpenShortcuts');
@@ -1742,15 +1752,6 @@ J'écris mes textes à la plume`;
         if (e.target === shortcutsModal) {
           shortcutsModal.classList.remove('open');
         }
-      });
-    }
-
-    // Toggle Légende Code Couleur (déplié de base)
-    const legendBarWrapper = document.getElementById('legendBarWrapper');
-    const legendToggleBtn = document.getElementById('legendToggleBtn');
-    if (legendToggleBtn && legendBarWrapper) {
-      legendToggleBtn.addEventListener('click', () => {
-        legendBarWrapper.classList.toggle('collapsed');
       });
     }
 
