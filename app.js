@@ -66,11 +66,9 @@
   const STORAGE_KEY_GEMINI_KEY = 'lyrr_gemini_api_key';
   const STORAGE_KEY_ACTIVE_TAB = 'lyrr_active_tab';
   const STORAGE_KEY_SHOW_BREAKDOWN = 'lyrr_show_breakdown';
-  const STORAGE_KEY_SHOW_RHYMES = 'lyrr_show_rhymes';
   const MODE = 'rap';
 
   let showBreakdown = true;
-  let showRhymes = true;
 
   // Canvas helper pour mesurer précisément la largeur du texte
   const measureCanvas = document.createElement('canvas');
@@ -186,11 +184,6 @@ J'écris mes textes à la plume`;
     let totalLinesCount = 0;
     let totalSyllablesCount = 0;
 
-    // Analyse globale des rimes du document
-    const docRhymes = showRhymes 
-      ? LyrrSyllables.analyzeDocumentRhymes(lines) 
-      : { results: {}, totalGroups: 0 };
-
     let html = '';
 
     for (let i = 0; i < lines.length; i++) {
@@ -227,24 +220,6 @@ J'écris mes textes à la plume`;
         meterClass = 'meter-16';
       } else if (count < 6) {
         meterClass = 'meter-short';
-      }
-
-      // Pilule et indicateurs de rime
-      let rhymePillHtml = '';
-      let rhymeRowAttr = '';
-      let rhymeRowStyle = '';
-      const rhyme = (showRhymes && docRhymes.results[i]) ? docRhymes.results[i] : null;
-
-      if (rhyme) {
-        rhymeRowAttr = `data-rhyme-group="${rhyme.groupId}"`;
-        rhymeRowStyle = `style="--rhyme-color: ${rhyme.color.hex}; --rhyme-bg: ${rhyme.color.bg}; --rhyme-border: ${rhyme.color.border};"`;
-        rhymePillHtml = `
-          <div class="rhyme-pill" data-rhyme-group="${rhyme.groupId}" title="Rime [${rhyme.schemeLetter}] en ${rhyme.sound} (${escapeHtml(rhyme.word)})">
-            <span class="rhyme-pill-dot"></span>
-            <span class="rhyme-pill-letter">${rhyme.schemeLetter}</span>
-            <span class="rhyme-pill-sound">${escapeHtml(rhyme.sound)}</span>
-          </div>
-        `;
       }
 
       // Ligne de décomposition : uniquement sur la ligne active quand elle contient du texte, n'est pas un tag et que showBreakdown est activé
@@ -309,13 +284,12 @@ J'écris mes textes à la plume`;
       }
 
       html += `
-        <div class="line-row ${rowActiveClass}" data-index="${i}" ${rhymeRowAttr} ${rhymeRowStyle}>
+        <div class="line-row ${rowActiveClass}" data-index="${i}">
           <div class="line-gutter">
             ${badgeHtml}
           </div>
           <div class="line-main">
             <input type="text" class="line-input ${inputExtraClass}" data-index="${i}" style="width: ${inputWidth}px;" value="${escapeHtml(lineText)}" spellcheck="false" autocomplete="off" placeholder="${i === 0 ? 'Écris tes lyrics ici...' : ''}">
-            ${rhymePillHtml}
             ${breakdownHtml}
           </div>
         </div>
@@ -411,111 +385,6 @@ J'écris mes textes à la plume`;
     statSyllableCount.textContent = totalSyllablesCount;
     const avg = totalLinesCount > 0 ? (totalSyllablesCount / totalLinesCount).toFixed(1) : '0';
     statAvgCount.textContent = avg;
-
-    // Statistique des rimes
-    const statRhymePill = document.getElementById('statRhymePill');
-    const statRhymeCount = document.getElementById('statRhymeCount');
-    if (statRhymePill && statRhymeCount) {
-      if (showRhymes) {
-        const docRhymes = LyrrSyllables.analyzeDocumentRhymes(lines);
-        if (docRhymes.totalGroups > 0) {
-          statRhymePill.style.display = 'inline-flex';
-          statRhymeCount.textContent = `${docRhymes.totalGroups} grp${docRhymes.totalGroups > 1 ? 's' : ''}`;
-        } else {
-          statRhymePill.style.display = 'none';
-        }
-      } else {
-        statRhymePill.style.display = 'none';
-      }
-    }
-  }
-
-  // --- Mise à jour en temps réel des rimes dans le DOM (ultra-léger, sans re-render complet) ---
-  let rhymeUpdateTimeout = null;
-
-  function scheduleRhymeUpdate() {
-    clearTimeout(rhymeUpdateTimeout);
-    rhymeUpdateTimeout = setTimeout(() => {
-      updateRhymeIndicatorsInDOM();
-    }, 120);
-  }
-
-  function updateRhymeIndicatorsInDOM() {
-    if (!editorLinesContainer) return;
-
-    if (!showRhymes) {
-      const rows = editorLinesContainer.querySelectorAll('.line-row');
-      rows.forEach(row => {
-        row.removeAttribute('data-rhyme-group');
-        row.style.removeProperty('--rhyme-color');
-        row.style.removeProperty('--rhyme-bg');
-        row.style.removeProperty('--rhyme-border');
-        const pill = row.querySelector('.rhyme-pill');
-        if (pill) pill.remove();
-      });
-      const statRhymePill = document.getElementById('statRhymePill');
-      if (statRhymePill) statRhymePill.style.display = 'none';
-      return;
-    }
-
-    const docRhymes = LyrrSyllables.analyzeDocumentRhymes(lines);
-    const rows = editorLinesContainer.querySelectorAll('.line-row');
-
-    rows.forEach(row => {
-      const idx = parseInt(row.dataset.index, 10);
-      const rhyme = docRhymes.results[idx];
-      const main = row.querySelector('.line-main');
-      const existingPill = main ? main.querySelector('.rhyme-pill') : null;
-
-      if (rhyme) {
-        row.setAttribute('data-rhyme-group', rhyme.groupId);
-        row.style.setProperty('--rhyme-color', rhyme.color.hex);
-        row.style.setProperty('--rhyme-bg', rhyme.color.bg);
-        row.style.setProperty('--rhyme-border', rhyme.color.border);
-
-        const pillHtml = `
-          <span class="rhyme-pill-dot"></span>
-          <span class="rhyme-pill-letter">${rhyme.schemeLetter}</span>
-          <span class="rhyme-pill-sound">${escapeHtml(rhyme.sound)}</span>
-        `;
-
-        if (existingPill) {
-          existingPill.setAttribute('data-rhyme-group', rhyme.groupId);
-          existingPill.title = `Rime [${rhyme.schemeLetter}] en ${rhyme.sound} (${escapeHtml(rhyme.word)})`;
-          existingPill.innerHTML = pillHtml;
-        } else if (main) {
-          const newPill = document.createElement('div');
-          newPill.className = 'rhyme-pill';
-          newPill.setAttribute('data-rhyme-group', rhyme.groupId);
-          newPill.title = `Rime [${rhyme.schemeLetter}] en ${rhyme.sound} (${escapeHtml(rhyme.word)})`;
-          newPill.innerHTML = pillHtml;
-
-          const breakdownEl = main.querySelector('.line-breakdown');
-          if (breakdownEl) {
-            main.insertBefore(newPill, breakdownEl);
-          } else {
-            main.appendChild(newPill);
-          }
-        }
-      } else {
-        row.removeAttribute('data-rhyme-group');
-        row.style.removeProperty('--rhyme-color');
-        row.style.removeProperty('--rhyme-bg');
-        row.style.removeProperty('--rhyme-border');
-        if (existingPill) existingPill.remove();
-      }
-    });
-
-    const statRhymePill = document.getElementById('statRhymePill');
-    const statRhymeCount = document.getElementById('statRhymeCount');
-    if (statRhymePill && statRhymeCount) {
-      if (docRhymes.totalGroups > 0) {
-        statRhymePill.style.display = 'inline-flex';
-        statRhymeCount.textContent = `${docRhymes.totalGroups} grp${docRhymes.totalGroups > 1 ? 's' : ''}`;
-      } else {
-        statRhymePill.style.display = 'none';
-      }
-    }
   }
 
   // --- Écouteurs d'événements de l'éditeur ---
@@ -613,9 +482,6 @@ J'écris mes textes à la plume`;
       }
 
       updateGlobalStats();
-      if (showRhymes) {
-        scheduleRhymeUpdate();
-      }
     });
 
     function shiftOverrides(fromIndex, delta) {
@@ -1064,59 +930,6 @@ J'écris mes textes à la plume`;
         }
       }
     });
-
-    // Survol synchronisé et interactions sur les rimes
-    initRhymeInteractions();
-  }
-
-  // --- Interactions Rimes (survol synchronisé & toasts) ---
-  let currentHoveredGroup = null;
-
-  function initRhymeInteractions() {
-    // Survol synchronisé de tout le groupe de rimes
-    editorLinesContainer.addEventListener('mouseover', (e) => {
-      const rhymeTarget = e.target.closest('[data-rhyme-group]');
-      if (!rhymeTarget) {
-        clearRhymeHover();
-        return;
-      }
-      const group = rhymeTarget.getAttribute('data-rhyme-group');
-      if (group && group !== currentHoveredGroup) {
-        currentHoveredGroup = group;
-        highlightRhymeGroup(group);
-      }
-    });
-
-    editorLinesContainer.addEventListener('mouseleave', () => {
-      clearRhymeHover();
-    });
-
-    // Clic sur une pilule de rime : notification toast informative
-    editorLinesContainer.addEventListener('click', (e) => {
-      const pill = e.target.closest('.rhyme-pill');
-      if (pill) {
-        const title = pill.getAttribute('title');
-        if (title) showToast(title);
-      }
-    });
-  }
-
-  function highlightRhymeGroup(group) {
-    const allRows = editorLinesContainer.querySelectorAll('.line-row');
-    allRows.forEach(row => {
-      if (row.getAttribute('data-rhyme-group') === group) {
-        row.classList.add('rhyme-highlighted');
-      } else {
-        row.classList.remove('rhyme-highlighted');
-      }
-    });
-  }
-
-  function clearRhymeHover() {
-    if (!currentHoveredGroup) return;
-    currentHoveredGroup = null;
-    const highlighted = editorLinesContainer.querySelectorAll('.line-row.rhyme-highlighted');
-    highlighted.forEach(row => row.classList.remove('rhyme-highlighted'));
   }
 
   // --- Exportation & Copie ---
@@ -1989,22 +1802,6 @@ Refrain`;
         geniusCharCount.textContent = `${len} caractère${len > 1 ? 's' : ''}`;
         if (btnGeniusFormat) btnGeniusFormat.disabled = false;
         showToast('Exemple type chargé dans les paroles brutes !');
-      });
-    }
-
-    // Toggle Surlignage Visuel des Rimes (persistance localStorage)
-    const checkShowRhymes = document.getElementById('checkShowRhymes');
-    if (checkShowRhymes) {
-      const savedRhymes = localStorage.getItem(STORAGE_KEY_SHOW_RHYMES);
-      if (savedRhymes !== null) {
-        showRhymes = (savedRhymes === 'true');
-        checkShowRhymes.checked = showRhymes;
-      }
-      checkShowRhymes.addEventListener('change', () => {
-        showRhymes = checkShowRhymes.checked;
-        localStorage.setItem(STORAGE_KEY_SHOW_RHYMES, showRhymes);
-        updateRhymeIndicatorsInDOM();
-        showToast(showRhymes ? 'Surlignage des rimes activé' : 'Surlignage des rimes masqué');
       });
     }
 

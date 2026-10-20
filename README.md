@@ -42,22 +42,15 @@ Aucune installation, aucun serveur ni dépendance :
      - `100` ➔ _"cent"_ ➔ **1 pied**
      - `2026` ➔ _"deux mille vingt-six"_ ➔ **4 pieds**
 
-6. **Surlignage visuel dynamique des rimes :**
-   - **Moteur phonétique français dédié :** analyse les terminaisons des vers en temps réel (suffixes riches, diphtongues, voyelles nasales, 'e' muets, consonnes muettes et élisions).
-   - **Code couleur par schéma de rimes :** chaque groupe de rimes récurrentes (au moins 2 vers) reçoit une couleur éclatante et une lettre de schéma (`[A]`, `[B]`, `[C]...`).
-   - **Pilule de rime élégante & accent visuel :** affichage discret en fin de vers `[ • A -ume ]` et liseré vertical lumineux dans la marge.
-   - **Survol interactif synchronisé :** survoler une rime illumine instantanément l'ensemble des vers qui riment ensemble dans le texte.
-   - **Interrupteur dédié :** toggle on/off `Rimes` dans la barre d'outils, sauvegardé automatiquement.
-
-7. **Ajustement manuel instantané :**
+6. **Ajustement manuel instantané :**
    - En cliquant sur le badge d'une ligne dans la marge gauche, tu peux forcer manuellement le nombre de pieds si tu as un flow spécifique.
 
-8. **Sauvegarde & Multi-projets :**
+7. **Sauvegarde & Multi-projets :**
    - **Sauvegarde automatique locale (`localStorage`)** : tes paroles ne sont jamais perdues.
    - **Projets** : bouton en haut pour créer et basculer entre plusieurs chansons.
    - **Export** : copier le texte brut, copier avec les mesures `[4]`, ou télécharger un fichier `.txt`.
 
-9. **Onglet Genius Lyrics Optimizer (100% Local & Instantané) :**
+8. **Onglet Genius Lyrics Optimizer (100% Local & Instantané) :**
    - Bascule immédiate entre **Studio Lyrics** et **Genius Optimizer** depuis la barre de navigation supérieure.
    - **Moteur Senior Local Dédié :** nettoyage et mise en page instantanés sans aucune clé API, sans serveur et sans quota :
      - **Normalisation des en-têtes de sections :** `[Intro]`, `[Couplet 1 : Artiste]`, `[Refrain]`, `[Pré-refrain]`, `[Pont]`, `[Outro]`, `[Solo]`, `[Break]`, `[Interlude]`.
@@ -108,9 +101,9 @@ Aucune installation, aucun serveur ni dépendance :
   - `Alt + ↑ / ↓` : Déplacer la ligne active
   - `Ctrl + S` : Sauvegarde manuelle immédiate
 - [x] **Correction orthographique ciblée** pour le français avec protection intégrale du slang US, de l'argot et des néologismes
-- [x] **Surlignage visuel dynamique des rimes** : code couleur sur les fins de vers qui riment ensemble (schémas `[A]`, `[B]`, `[C]...`, survol synchronisé, toggle on/off, liseré lumineux dans la marge)
 - [x] **100% autonome et local** : s'exécute d'un double-clic sur `index.html`, sans serveur ni dépendance
 
 ### 🚀 Prochaines étapes (v2.0)
 
 - [ ] **Dictionnaire de rimes & assonances local** : suggestion de rimes par proximité phonétique sans connexion internet
+- [ ] **Surlignage visuel des rimes** : code couleur sur les fins de vers qui riment ensemble

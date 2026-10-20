@@ -632,44 +632,18 @@ body {
 }
 
 .line-row {
-  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
   height: 36px;
   margin-bottom: 2px;
   border-radius: var(--radius-sm);
-  transition: background var(--transition-fast), box-shadow var(--transition-fast);
+  transition: background var(--transition-fast);
   cursor: text;
 }
 
 .line-row.active {
   background: rgba(99, 102, 241, 0.05);
-}
-
-/* Accentuation latérale discrète et élégante pour les rimes */
-.line-row[data-rhyme-group]::before {
-  content: '';
-  position: absolute;
-  left: 2px;
-  top: 6px;
-  bottom: 6px;
-  width: 3px;
-  border-radius: 2px;
-  background: var(--rhyme-color, transparent);
-  box-shadow: 0 0 8px var(--rhyme-color, transparent);
-  transition: all var(--transition-fast);
-}
-
-/* Survol synchronisé de toutes les lignes d'un même groupe de rimes */
-.line-row.rhyme-highlighted {
-  background: var(--rhyme-bg, rgba(99, 102, 241, 0.12)) !important;
-  box-shadow: inset 0 0 0 1px var(--rhyme-border, rgba(99, 102, 241, 0.4)), 0 0 18px var(--rhyme-bg, rgba(99, 102, 241, 0.15)) !important;
-}
-
-.line-row.rhyme-highlighted[data-rhyme-group]::before {
-  width: 4px;
-  box-shadow: 0 0 12px var(--rhyme-color);
 }
 
 /* Gutter (Syllable Badge only, perfectly centered and aligned) */
@@ -897,71 +871,6 @@ body {
   padding: 0 4px;
   border-radius: 3px;
   font-size: 10px;
-}
-
-/* ==========================================================================
-   Rhyme Pills (Surlignage visuel des rimes par code couleur)
-   ========================================================================== */
-.rhyme-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 22px;
-  padding: 0 7px;
-  border-radius: var(--radius-sm);
-  background: var(--rhyme-bg, rgba(99, 102, 241, 0.16));
-  border: 1px solid var(--rhyme-border, rgba(99, 102, 241, 0.45));
-  color: var(--rhyme-color, #a5b4fc);
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-  user-select: none;
-  flex-shrink: 0;
-  transition: all var(--transition-fast);
-  animation: fadeInRhyme 0.14s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes fadeInRhyme {
-  from {
-    opacity: 0;
-    transform: scale(0.92);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.rhyme-pill:hover {
-  transform: scale(1.08);
-  box-shadow: 0 0 10px var(--rhyme-border, rgba(99, 102, 241, 0.5));
-}
-
-.line-row.rhyme-highlighted .rhyme-pill {
-  transform: scale(1.08);
-  box-shadow: 0 0 12px var(--rhyme-color);
-}
-
-.rhyme-pill-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--rhyme-color, currentColor);
-  box-shadow: 0 0 6px var(--rhyme-color, currentColor);
-  flex-shrink: 0;
-}
-
-.rhyme-pill-letter {
-  font-weight: 800;
-  font-size: 11px;
-  letter-spacing: 0.3px;
-}
-
-.rhyme-pill-sound {
-  font-size: 10px;
-  font-weight: 500;
-  opacity: 0.85;
 }
 
 /* Line Text Input */
