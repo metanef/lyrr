@@ -65,7 +65,10 @@
   const STORAGE_KEY = 'lyrr_studio_songs_v3';
   const STORAGE_KEY_GEMINI_KEY = 'lyrr_gemini_api_key';
   const STORAGE_KEY_ACTIVE_TAB = 'lyrr_active_tab';
+  const STORAGE_KEY_SHOW_BREAKDOWN = 'lyrr_show_breakdown';
   const MODE = 'rap';
+
+  let showBreakdown = true;
 
   // Canvas helper pour mesurer précisément la largeur du texte
   const measureCanvas = document.createElement('canvas');
@@ -219,9 +222,9 @@ J'écris mes textes à la plume`;
         meterClass = 'meter-short';
       }
 
-      // Ligne de décomposition : uniquement sur la ligne active quand elle contient du texte et n'est pas un tag
+      // Ligne de décomposition : uniquement sur la ligne active quand elle contient du texte, n'est pas un tag et que showBreakdown est activé
       let breakdownHtml = '';
-      if (isActive && lineText.trim().length > 0 && !isTag) {
+      if (showBreakdown && isActive && lineText.trim().length > 0 && !isTag) {
         if (!syllableResult) {
           syllableResult = LyrrSyllables.countLineSyllables(lineText, MODE);
         }
@@ -451,7 +454,7 @@ J'écris mes textes à la plume`;
         const main = row.querySelector('.line-main');
         if (main) {
           let breakdownEl = main.querySelector('.line-breakdown');
-          if (lineText.trim().length > 0 && !isTag) {
+          if (showBreakdown && lineText.trim().length > 0 && !isTag) {
             let chipsHtml = '';
             for (const w of syllableResult.words) {
               let extraClass = '';
@@ -867,13 +870,10 @@ J'écris mes textes à la plume`;
       }
     });
 
-    // Clic pour fermer la ligne de pieds si on clique à droite de l'éditeur ou dans une zone vide
+    // Gestion du clic dans l'éditeur : cliquer n'importe où sur une ligne (à droite ou à gauche) active le mode édition
     editorLinesContainer.addEventListener('mousedown', (e) => {
-      // 1. Clic sur un badge dans la marge ou sur l'input d'édition : ne pas fermer
+      // 1. Clic sur le badge dans la marge ou son input d'édition : ne pas interférer
       if (e.target.closest('.syllable-badge') || e.target.closest('.badge-edit-input')) return;
-
-      // 2. Clic sur la ligne de décomposition : garder ouvert
-      if (e.target.closest('.line-breakdown')) return;
 
       // Si un badge était en cours d'édition et qu'on clique ailleurs
       if (editingBadgeIndex !== null) {
@@ -883,32 +883,43 @@ J'écris mes textes à la plume`;
         }
       }
 
-      // 3. Clic sur un input de texte
-      const input = e.target.closest('.line-input');
-      if (input) {
-        const textWidth = measureTextWidth(input.value);
-        // Si le clic se trouve à droite du texte (au-delà du texte + marge de 25px)
-        if (e.offsetX > textWidth + 25) {
+      // 2. Clic sur une ligne (sur le texte, sur les jetons, à droite ou dans le vide de la ligne)
+      const row = e.target.closest('.line-row');
+      if (row) {
+        const index = parseInt(row.dataset.index, 10);
+        const input = row.querySelector('.line-input');
+
+        // Si le clic n'a pas été fait directement sur l'input texte lui-même (ex: clic à droite du texte)
+        if (e.target !== input) {
           e.preventDefault();
-          input.blur();
-          if (activeLineIndex !== null) {
-            activeLineIndex = null;
-            renderAllLines();
+          if (activeLineIndex !== index) {
+            setActiveLine(index, (lines[index] || '').length);
+          } else if (input) {
+            input.focus();
+            const len = (lines[index] || '').length;
+            input.setSelectionRange(len, len);
           }
-          return;
         }
         return;
       }
 
-      // 4. Clic à droite du texte (dans .line-main ou .line-row) ou en-dessous dans l'espace vide
-      if (activeLineIndex !== null) {
-        e.preventDefault();
-        activeLineIndex = null;
-        renderAllLines();
+      // 3. Clic dans la zone vide en-dessous de toutes les lignes
+      if (lines.length > 0) {
+        const lastIndex = lines.length - 1;
+        if (activeLineIndex !== lastIndex) {
+          setActiveLine(lastIndex, (lines[lastIndex] || '').length);
+        } else {
+          const lastInput = editorLinesContainer.querySelector(`.line-input[data-index="${lastIndex}"]`);
+          if (lastInput) {
+            lastInput.focus();
+            const len = (lines[lastIndex] || '').length;
+            lastInput.setSelectionRange(len, len);
+          }
+        }
       }
     });
 
-    // Clic en-dehors de l'éditeur : valide l'édition en cours et referme la décomposition
+    // Clic en-dehors de l'éditeur : valide l'édition de badge si en cours
     document.addEventListener('mousedown', (e) => {
       if (!editorLinesContainer.contains(e.target)) {
         if (editingBadgeIndex !== null) {
@@ -916,10 +927,6 @@ J'écris mes textes à la plume`;
           if (badgeInput) {
             commitBadgeEdit(editingBadgeIndex, badgeInput.value);
           }
-        }
-        if (activeLineIndex !== null) {
-          activeLineIndex = null;
-          renderAllLines();
         }
       }
     });
@@ -1795,6 +1802,22 @@ Refrain`;
         geniusCharCount.textContent = `${len} caractère${len > 1 ? 's' : ''}`;
         if (btnGeniusFormat) btnGeniusFormat.disabled = false;
         showToast('Exemple type chargé dans les paroles brutes !');
+      });
+    }
+
+    // Toggle Affichage Décomposition des pieds Studio (persistance localStorage)
+    const checkShowBreakdown = document.getElementById('checkShowBreakdown');
+    if (checkShowBreakdown) {
+      const savedBreakdown = localStorage.getItem(STORAGE_KEY_SHOW_BREAKDOWN);
+      if (savedBreakdown !== null) {
+        showBreakdown = (savedBreakdown === 'true');
+        checkShowBreakdown.checked = showBreakdown;
+      }
+      checkShowBreakdown.addEventListener('change', () => {
+        showBreakdown = checkShowBreakdown.checked;
+        localStorage.setItem(STORAGE_KEY_SHOW_BREAKDOWN, showBreakdown);
+        renderAllLines(activeLineIndex);
+        showToast(showBreakdown ? 'Détail des pieds activé' : 'Détail des pieds masqué');
       });
     }
 
