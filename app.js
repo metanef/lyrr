@@ -900,6 +900,17 @@ IMPORTANT: Ne renvoie QUE les paroles formitées, sans texte d'introduction ni d
       tabBtnGenius.classList.add('active');
       tabPaneStudio.classList.remove('active');
       tabPaneGenius.classList.add('active');
+
+      // Écriture automatique des paroles du Studio dans l'optimiseur Genius
+      const studioText = (lines || []).join('\n');
+      if (studioText.trim()) {
+        geniusInputLyrics.value = studioText;
+        const len = studioText.length;
+        geniusCharCount.textContent = `${len} caractère${len > 1 ? 's' : ''}`;
+        if (btnGeniusFormatAi) {
+          btnGeniusFormatAi.disabled = false;
+        }
+      }
     } else {
       tabBtnGenius.classList.remove('active');
       tabBtnStudio.classList.add('active');
