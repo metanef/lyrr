@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lyrr - Bloc-notes Lyrics & Compteur de Syllabes</title>
+  <meta name="description" content="Bloc-notes pour lyricistes avec comptage des pieds en temps réel, support des acronymes et des nombres.">
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="bg-ambient"></div>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="brand-section">
+      <div class="brand-logo" title="Lyrr">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 18V5l12-2v13"></path>
+          <circle cx="6" cy="18" r="3"></circle>
+          <circle cx="18" cy="16" r="3"></circle>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <h1>Lyrr <span class="brand-tag">Studio</span></h1>
+      </div>
+    </div>
+
+    <!-- Song Title & Auto-Save -->
+    <div class="project-section">
+      <div class="title-input-wrapper">
+        <input type="text" id="songTitleInput" class="song-title-input" value="Mon Premier Texte" placeholder="Titre du son..." maxlength="60">
+        <div id="saveIndicator" class="save-indicator" title="Sauvegarde locale automatique">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M20 6L9 17l-5-5"></path>
+          </svg>
+          <span id="saveText">Enregistré</span>
+        </div>
+      </div>
+      <button id="btnOpenProjects" class="btn-action" title="Gérer mes textes">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-6l-2-2H5a2 2 0 0 0-2 2z"></path>
+        </svg>
+        <span>Projets</span>
+      </button>
+    </div>
+
+    <!-- Actions Dropdown -->
+    <div class="header-tools">
+      <div class="dropdown" id="exportDropdown">
+        <button id="btnExportMenu" class="btn-action primary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span>Exporter</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
+        <div class="dropdown-menu">
+          <button id="btnCopyRaw" class="dropdown-item">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            <span>Copier le texte brut</span>
+          </button>
+          <button id="btnCopyDetailed" class="dropdown-item">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+            <span>Copier avec les pieds [4]</span>
+          </button>
+          <button id="btnDownloadTxt" class="dropdown-item">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span>Télécharger fichier .txt</span>
+          </button>
+          <hr style="border: 0; border-top: 1px solid var(--border-subtle); margin: 4px 0;">
+          <button id="btnClearText" class="dropdown-item" style="color: var(--accent-rose);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+            <span>Effacer le texte</span>
+          </button>
+        </div>
+      </div>
+  </header>
+
+  <!-- Bandeau Dépliable : Code couleur des types de mots (Sous le header, déplié de base) -->
+  <div id="legendBarWrapper" class="legend-bar-wrapper">
+    <div id="legendToggleBtn" class="legend-bar-header" title="Cliquer pour afficher ou replier le code couleur">
+      <div class="legend-header-left">
+        <svg class="legend-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        <span>Code couleur des mots</span>
+      </div>
+      <button class="legend-toggle-btn" aria-label="Replier ou déplier">
+        <svg class="chevron-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </button>
+    </div>
+
+    <div class="legend-content" id="legendContent">
+      <div class="legend-item">
+        <div class="word-chip">
+          <span class="chip-token">heu·reux</span>
+          <span class="chip-count">2</span>
+        </div>
+        <span class="legend-label"><strong>Mots standards :</strong> texte normal (découpage des pieds avec <code>·</code>)</span>
+      </div>
+      <div class="legend-item">
+        <div class="word-chip acronym">
+          <span class="chip-token">P·D·G</span>
+          <span class="chip-count">3</span>
+        </div>
+        <span class="legend-label"><strong>Sigles & Acronymes (bleu cyan) :</strong> épelés lettre par lettre (ex : <em>P·D·G</em>, <em>F·B·I</em>, <em>R·A·T·P</em>)</span>
+      </div>
+      <div class="legend-item">
+        <div class="word-chip number">
+          <span class="chip-token">14</span>
+          <span class="chip-count">2</span>
+        </div>
+        <span class="legend-label"><strong>Chiffres & Nombres (orange) :</strong> convertis phonétiquement (ex : <em>14</em> ➔ <em>qua·torze</em>)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Workspace -->
+  <main class="workspace-container">
+    <div class="editor-card">
+      <!-- Editor Top Stats Bar -->
+      <div class="editor-top-bar">
+        <div class="editor-info-left">
+          <div class="stat-pill">
+            <span>Vers :</span>
+            <strong id="statLineCount">0</strong>
+          </div>
+          <div class="stat-pill">
+            <span>Total pieds :</span>
+            <strong id="statSyllableCount">0</strong>
+          </div>
+          <div class="stat-pill">
+            <span>Moyenne/ligne :</span>
+            <strong id="statAvgCount">0</strong>
+          </div>
+        </div>
+        <div class="editor-hint">
+          <span>💡 Clique sur une ligne pour afficher sa décomposition entre les vers</span>
+        </div>
+      </div>
+
+      <!-- Line-by-Line Document Editor -->
+      <div id="editorLinesContainer" class="editor-lines-container">
+        <!-- Rendu dynamique des lignes avec ligne de décomposition insérée -->
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal Gestion des Projets -->
+  <div id="projectsModal" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Mes Textes & Chansons</h3>
+        <button id="btnCloseModal" class="btn-icon-sm">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div id="songsListContainer" class="song-list">
+        <!-- Liste dynamique -->
+      </div>
+
+      <div style="display: flex; gap: 10px; justify-content: flex-end;">
+        <button id="btnNewSong" class="btn-action primary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>Nouveau texte</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="toastNotification" class="toast">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+      <polyline points="22 4 12 14.01 9 11.01"></polyline>
+    </svg>
+    <span id="toastMessage">Texte copié dans le presse-papier !</span>
+  </div>
+
+  <!-- Scripts -->
+  <script src="syllables.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
