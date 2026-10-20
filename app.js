@@ -769,7 +769,191 @@ J'écris mes textes à la plume`;
     };
   }
 
-  function cleanLyricLine(lineStr, stats) {
+  // Whitelist de termes d'argot, verlan, street, US trap/drill, interjections à préserver impérativement
+  const SLANG_WHITELIST = new Set([
+    'wesh', 'binks', 'bicrave', 'bicraver', 'gadji', 'gadjo', 'reuf', 'reufré', 'reum', 'reup',
+    'daron', 'daronne', 'kiffer', 'kiff', 'kiffe', 'zbeul', 'tarpin', 'peuf', 'ter-ter', 'charbon',
+    'charbonner', 'charbonne', 'caler', 'hess', 'zer', 'iencli', 'ien-cli', 'beuh', 'meuf', 'keuf',
+    'teubé', 'relou', 'chelou', 'vénère', 'chanmé', 'zarbi', 'bédo', 'bedo', 'seum', 'kho', 'khoya',
+    'fréro', 'frérot', 'frero', 'frerot', 'moula', 'mola', 'go', 'bae', 'tipeu', 'narvalo', 'taga',
+    'teh', 'chouf', 'chouffe', 'shmeta', 'condé', 'conde', 'tise', 'tiser', 'taff', 'taffer', 'brolik',
+    'bécanne', 'becanne', 'gamos', 'pilon', 'pera', 'pe-ra', 'zik', 'dégun', 'degun', 'fada', 'skeu',
+    'cimer', 'poucave', 'zgeg', 'chicha', 'boulot', 'blaze', 'oseille', 'flouze', 'pèze', 'peze',
+    'maille', 'lovés', 'loves', 'biff', 'gun', 'schlass', 'beurette', 'babtou', 'renoi', 'céfran',
+    'cefran', 'keus', 'pécho', 'pecho', 'choppé', 'choppe', 'calba',
+    'skrrt', 'skrt', 'draco', 'drip', 'sauce', 'ops', 'opps', 'shawty', 'flex', 'flexer',
+    'trap', 'trappeur', 'plug', 'gang', 'hood', 'bro', 'homie', 'goat', 'chill', 'chillin', 'vibe',
+    'flow', 'beat', 'drill', 'feat', 'ft', 'fade', 'cash', 'racks', 'stack', 'bad', 'mood', 'bitch',
+    'hustle', 'game', 'mic', 'drop', 'cliqua', 'squad', 'beef', 'spin', 'glide', 'slide', 'cap',
+    'glock', 'choppa', 'lean', 'weed', 'blunt', 'joint', 'dope', 'ice', 'chain', 'grillz',
+    'ouais', 'nan', 'nah', 'nope', 'yep', 'yo', 'yeah', 'skkrt', 'brrr', 'grrr', 'bang', 'paw'
+  ]);
+
+  const WORD_SPELL_MAP = {
+    'deja': 'déjà',
+    'déja': 'déjà',
+    'dejà': 'déjà',
+    'meme': 'même',
+    'memes': 'mêmes',
+    'tres': 'très',
+    'etre': 'être',
+    'bientot': 'bientôt',
+    'plutot': 'plutôt',
+    'aussitot': 'aussitôt',
+    'apres': 'après',
+    'pres': 'près',
+    'pret': 'prêt',
+    'prets': 'prêts',
+    'prete': 'prête',
+    'pretes': 'prêtes',
+    'tete': 'tête',
+    'tetes': 'têtes',
+    'reve': 'rêve',
+    'reves': 'rêves',
+    'rever': 'rêver',
+    'reveur': 'rêveur',
+    'fete': 'fête',
+    'fetes': 'fêtes',
+    'feter': 'fêter',
+    'foret': 'forêt',
+    'forets': 'forêts',
+    'fenetre': 'fenêtre',
+    'fenetres': 'fenêtres',
+    'arrete': 'arrête',
+    'arretes': 'arrêtes',
+    'arreter': 'arrêter',
+    'coeur': 'cœur',
+    'coeurs': 'cœurs',
+    'soeur': 'sœur',
+    'soeurs': 'sœurs',
+    'noeud': 'nœud',
+    'noeuds': 'nœuds',
+    'voeu': 'vœu',
+    'voeux': 'vœux',
+    'voila': 'voilà',
+    'plait': 'plaît',
+    'connait': 'connaît',
+    'reconnait': 'reconnaît',
+    'disparait': 'disparaît',
+    'parait': 'paraît',
+    'naitre': 'naître',
+    'toujour': 'toujours',
+    'jamai': 'jamais',
+    'parceque': 'parce que',
+    'quelquun': "quelqu'un",
+    'quelquune': "quelqu'une",
+    'daccord': "d'accord",
+    'aujourdhui': "aujourd'hui",
+    'ecrit': 'écrit',
+    'ecrite': 'écrite',
+    'ecrits': 'écrits',
+    'repond': 'répond',
+    'repondu': 'répondu',
+    'repondre': 'répondre',
+    'equipe': 'équipe',
+    'equipes': 'équipes',
+    'verite': 'vérité',
+    'realite': 'réalité',
+    'liberte': 'liberté',
+    'fidelite': 'fidélité',
+    'societe': 'société',
+    'annee': 'année',
+    'annees': 'années',
+    'soiree': 'soirée',
+    'soirees': 'soirées',
+    'journee': 'journée',
+    'journees': 'journées'
+  };
+
+  const PHRASE_SPELL_RULES = [
+    { regex: /\b(est|sont|suis|es|sommes|êtes|était|étaient|être)\s+la\b/gi, replace: '$1 là' },
+    { regex: /\bqui\s+est\s+la\b/gi, replace: 'qui est là' },
+    { regex: /\bpas\s+a\s+pas\b/gi, replace: 'pas à pas' },
+    { regex: /\bpeu\s+a\s+peu\b/gi, replace: 'peu à peu' },
+    { regex: /\bpeut\s+etre\b/gi, replace: 'peut-être' },
+    { regex: /\bpeut-etre\b/gi, replace: 'peut-être' },
+    { regex: /\bau\s+dela\b/gi, replace: 'au-delà' },
+    { regex: /\bau-dela\b/gi, replace: 'au-delà' },
+    { regex: /\bla\s+bas\b/gi, replace: 'là-bas' },
+    { regex: /\bla-bas\b/gi, replace: 'là-bas' },
+    { regex: /\bc'est\s+a\s+dire\b/gi, replace: "c'est-à-dire" },
+    { regex: /\bc'est-a-dire\b/gi, replace: "c'est-à-dire" },
+    { regex: /\bvis\s+a\s+vis\b/gi, replace: "vis-à-vis" },
+    { regex: /\bvis-a-vis\b/gi, replace: "vis-à-vis" },
+    { regex: /\bgrace\s+a\b/gi, replace: 'grâce à' },
+    { regex: /\bgrâce\s+a\b/gi, replace: 'grâce à' },
+    { regex: /\btout\s+a\s+fait\b/gi, replace: 'tout à fait' },
+    { regex: /\btout\s+a\s+coup\b/gi, replace: 'tout à coup' },
+    { regex: /\bface\s+a\b/gi, replace: 'face à' },
+    { regex: /\bquant\s+a\b/gi, replace: 'quant à' },
+    { regex: /\bjusqu['’\s]*a\b/gi, replace: "jusqu'à" },
+    { regex: /\bbien\s+sur\b/gi, replace: 'bien sûr' },
+    { regex: /\ba\s+coup\s+sur\b/gi, replace: 'à coup sûr' },
+    { regex: /\bpour\s+sur\b/gi, replace: 'pour sûr' },
+    { regex: /\bsur\s+et\s+certain\b/gi, replace: 'sûr et certain' },
+    { regex: /\bquelque\s+soit\b/gi, replace: 'quel que soit' },
+    { regex: /\bquelque\s+soient\b/gi, replace: 'quel que soient' },
+    { regex: /\bca\s+(va|fait|marche|tourne|chauffe|part|roule|plane|donne|vient|sent|ressemble|me|te|nous|vous|lui|leur|commence)\b/gi, replace: 'ça $1' },
+    { regex: /\bc'est\s+ca\b/gi, replace: "c'est ça" },
+    { regex: /\bcomme\s+ca\b/gi, replace: 'comme ça' },
+    { regex: /\bpour\s+ca\b/gi, replace: 'pour ça' },
+    { regex: /\btout\s+ca\b/gi, replace: 'tout ça' },
+    { regex: /\bsans\s+ca\b/gi, replace: 'sans ça' },
+    { regex: /\bd['’]ou\b/gi, replace: "d'où" },
+    { regex: /\bpar\s+ou\b/gi, replace: 'par où' },
+    { regex: /\bla\s+ou\b/gi, replace: 'là où' },
+    { regex: /\blà\s+ou\b/gi, replace: 'là où' },
+    { regex: /\bvers\s+ou\b/gi, replace: 'vers où' },
+    { regex: /\bjusqu['’]ou\b/gi, replace: "jusqu'où" },
+    { regex: /\bou\s+(tu\s+vas|je\s+vais|on\s+va|il\s+va|elle\s+va|nous\s+allons|vous\s+allez|ils\s+vont)\b/gi, replace: 'où $1' },
+    { regex: /\b(a)\s+(la|l'|le|mon|ma|mes|ton|ta|tes|son|sa|ses|notre|nos|votre|vos|leur|leurs|côté|jamais|fond|mort|peine|nouveau|part|travers|bout|cause|ce\s+point|cet|cette|ces|qui|quoi|chacun|tous|toutes|deux|trois|quatre|dix|cent|mille)\b/gi, replace: 'à $2' }
+  ];
+
+  function preserveCase(original, replacement) {
+    if (original === original.toUpperCase() && original.length > 1) {
+      return replacement.toUpperCase();
+    }
+    if (original.charAt(0) === original.charAt(0).toUpperCase()) {
+      return replacement.charAt(0).toUpperCase() + replacement.slice(1);
+    }
+    return replacement;
+  }
+
+  function correctLyricsSpelling(line, stats) {
+    let updated = line;
+
+    for (const rule of PHRASE_SPELL_RULES) {
+      updated = updated.replace(rule.regex, (match, ...args) => {
+        let rep = rule.replace;
+        if (rep.includes('$')) {
+          rep = rep.replace(/\$(\d+)/g, (_, num) => args[parseInt(num, 10) - 1] || '');
+        }
+        if (match.toLowerCase() !== rep.toLowerCase()) {
+          stats.spellingCorrected++;
+        }
+        return preserveCase(match, rep);
+      });
+    }
+
+    updated = updated.replace(/\b([a-zA-Zà-öø-ÿ]+)\b/g, (match) => {
+      const lower = match.toLowerCase();
+      if (SLANG_WHITELIST.has(lower)) {
+        return match;
+      }
+      if (WORD_SPELL_MAP[lower]) {
+        const target = WORD_SPELL_MAP[lower];
+        if (match !== target) {
+          stats.spellingCorrected++;
+          return preserveCase(match, target);
+        }
+      }
+      return match;
+    });
+
+    return updated;
+  }
+
+  function cleanLyricLine(lineStr, stats, enableSpellcheck = true) {
     let line = lineStr.trim();
     if (!line) return { line: '', repeatCount: 1 };
 
@@ -814,6 +998,11 @@ J'écris mes textes à la plume`;
       return `(${toTitleCase(p.trim())})`;
     });
 
+    // Correction orthographique ciblée (si activée)
+    if (enableSpellcheck) {
+      line = correctLyricsSpelling(line, stats);
+    }
+
     // Mettre une majuscule au premier mot des ad-libs entre parenthèses : (yeah, yeah) -> (Yeah, yeah)
     line = line.replace(/\(([^)]+)\)/g, (m, inner) => {
       const trimmed = inner.trim();
@@ -850,7 +1039,9 @@ J'écris mes textes à la plume`;
     return { line, repeatCount };
   }
 
-  function formatLyricsGeniusLocal(raw) {
+  function formatLyricsGeniusLocal(raw, options = {}) {
+    const enableSpellcheck = options.enableSpellcheck !== false;
+
     if (!raw || !raw.trim()) {
       return {
         text: '',
@@ -859,7 +1050,8 @@ J'écris mes textes à la plume`;
           linesCapitalized: 0,
           punctuationCleaned: 0,
           repetitionsExpanded: 0,
-          adlibsCleaned: 0
+          adlibsCleaned: 0,
+          spellingCorrected: 0
         }
       };
     }
@@ -869,7 +1061,8 @@ J'écris mes textes à la plume`;
       linesCapitalized: 0,
       punctuationCleaned: 0,
       repetitionsExpanded: 0,
-      adlibsCleaned: 0
+      adlibsCleaned: 0,
+      spellingCorrected: 0
     };
 
     const linesRaw = raw.split(/\r?\n/);
@@ -918,7 +1111,7 @@ J'écris mes textes à la plume`;
       }
 
       // Ligne de parole individuelle
-      const { line: cleanLine, repeatCount } = cleanLyricLine(trimmed, stats);
+      const { line: cleanLine, repeatCount } = cleanLyricLine(trimmed, stats, enableSpellcheck);
       if (cleanLine) {
         for (let r = 0; r < repeatCount; r++) {
           curSection.lines.push(cleanLine);
@@ -1016,6 +1209,9 @@ J'écris mes textes à la plume`;
         }
         if (stats.adlibsCleaned > 0) {
           summaryHtml += `<div class="genius-stat-badge"><span>${stats.adlibsCleaned} ad-lib${stats.adlibsCleaned > 1 ? 's' : ''} ( )</span></div>`;
+        }
+        if (stats.spellingCorrected > 0) {
+          summaryHtml += `<div class="genius-stat-badge highlight"><span>${stats.spellingCorrected} orthographe corrigée${stats.spellingCorrected > 1 ? 's' : ''}</span></div>`;
         }
         geniusStatsSummary.innerHTML = summaryHtml;
         geniusStatsSummary.style.display = 'flex';
@@ -1152,23 +1348,24 @@ J'écris mes textes à la plume`;
       btnGeniusLoadExample.addEventListener('click', (e) => {
         e.stopPropagation();
         const exampleSong = `intro:
-yo, tout le monde est là,
+yo, tout le monde est la,
 on est dans la zone (skrrt)
 
 couplet 1 - booba
 j'arrive dans le game, sans faire de bruit
-les rues sont sombres, la nuit nous suit
-qui est là ? personne ne répond...
-tout est écrit, tout est dit (ouh, ouh)
+meme si les rues sont sombres, la nuit nous suit
+j'suis deja pret pour le combat
+qui est la ? personne ne repond...
+tout est ecrit, tout est dit (ouh, ouh)
 
 refrain (x2)
 on trace notre chemin jusqu'au sommet
-jamais on n'oubliera d'où l'on vient
+jamais on n'oubliera d'ou l'on vient
 
 couplet 2 feat ninho
 le temps passe vite mais j'garde le cap
 chaque seconde compte sur la map
-mon équipe avance pas à pas x2
+mon equipe avance pas a pas x2
 
 Refrain`;
 
@@ -1177,6 +1374,19 @@ Refrain`;
         geniusCharCount.textContent = `${len} caractère${len > 1 ? 's' : ''}`;
         if (btnGeniusFormat) btnGeniusFormat.disabled = false;
         showToast('Exemple type chargé dans les paroles brutes !');
+      });
+    }
+
+    // Toggle Correction Orthographique (persistance localStorage)
+    const checkGeniusSpellcheck = document.getElementById('checkGeniusSpellcheck');
+    const STORAGE_KEY_GENIUS_SPELLCHECK = 'lyrr_genius_spellcheck';
+    if (checkGeniusSpellcheck) {
+      const savedSpell = localStorage.getItem(STORAGE_KEY_GENIUS_SPELLCHECK);
+      if (savedSpell !== null) {
+        checkGeniusSpellcheck.checked = (savedSpell === 'true');
+      }
+      checkGeniusSpellcheck.addEventListener('change', () => {
+        localStorage.setItem(STORAGE_KEY_GENIUS_SPELLCHECK, checkGeniusSpellcheck.checked);
       });
     }
 
@@ -1262,7 +1472,8 @@ Refrain`;
         showToast('Collez d\'abord vos paroles brutes.');
         return;
       }
-      const result = formatLyricsGeniusLocal(raw);
+      const enableSpellcheck = checkGeniusSpellcheck ? checkGeniusSpellcheck.checked : true;
+      const result = formatLyricsGeniusLocal(raw, { enableSpellcheck });
       setGeniusState('output', result.text, result.stats);
       showToast('Paroles optimisées selon les standards Genius !');
     });

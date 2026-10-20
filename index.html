@@ -214,6 +214,12 @@
         </div>
 
         <div class="genius-actions">
+          <label class="genius-spellcheck-toggle" title="Corrige les accents et fautes de français courants sans toucher au slang, à l'argot ni aux néologismes">
+            <input type="checkbox" id="checkGeniusSpellcheck" checked>
+            <span class="toggle-switch-slider"></span>
+            <span class="toggle-label">Orthographe auto</span>
+          </label>
+
           <button id="btnGeniusImportStudio" class="btn-action" title="Importer le texte du Studio Lyrics">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -336,23 +342,26 @@
               </div>
             </div>
 
-            <!-- Carte 4 : Ponctuation & Casse -->
+            <!-- Carte 4 : Ponctuation & Orthographe -->
             <div class="syntax-card">
               <div class="syntax-card-title">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                   <polyline points="9 18 15 12 9 6"></polyline>
                 </svg>
-                <strong>Ponctuation & Casse</strong>
+                <strong>Ponctuation & Orthographe</strong>
               </div>
               <div class="syntax-rows">
                 <div class="syntax-row">
-                  <code>dans la rue,</code> <span class="syntax-arrow">➔</span> <span class="syntax-tag">Dans la rue</span> <span class="syntax-desc">(virgule ôtée)</span>
+                  <code>dans la rue,</code> <span class="syntax-arrow">➔</span> <span class="syntax-tag">Dans la rue</span>
+                </div>
+                <div class="syntax-row">
+                  <code>deja</code>, <code>meme</code>, <code>a la rue</code> <span class="syntax-arrow">➔</span> <span class="syntax-tag">déjà</span>, <span class="syntax-tag">même</span>, <span class="syntax-tag">à la rue</span>
                 </div>
                 <div class="syntax-row">
                   <code>qui est là ?</code> <span class="syntax-arrow">➔</span> <span class="syntax-desc">Garde <code>?</code>, <code>!</code>, <code>...</code></span>
                 </div>
                 <div class="syntax-row">
-                  <span class="syntax-desc">Majuscule automatique à chaque vers</span>
+                  <span class="syntax-desc">Slang, argot & néologismes 100% préservés</span>
                 </div>
               </div>
             </div>

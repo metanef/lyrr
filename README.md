@@ -30,8 +30,6 @@ Aucune installation, aucun serveur ni dépendance :
      - **Chiffres & Nombres** (badge orange ambré, convertis en mots : `14` ➔ `qua·torze`)
    - Déplié par défaut à l'ouverture, repliable d'un simple clic sur son en-tête.
 
-
-
 4. **Gestion automatique des sigles & acronymes :**
    - Les sigles en majuscules sont prononcés lettre par lettre :
      - `PDG` ➔ **3 pieds** (P-D-G)
@@ -40,9 +38,9 @@ Aucune installation, aucun serveur ni dépendance :
 
 5. **Gestion automatique des nombres en chiffres :**
    - Les chiffres sont traduits phonétiquement en temps réel :
-     - `14` ➔ *"quatorze"* ➔ **2 pieds**
-     - `100` ➔ *"cent"* ➔ **1 pied**
-     - `2026` ➔ *"deux mille vingt-six"* ➔ **4 pieds**
+     - `14` ➔ _"quatorze"_ ➔ **2 pieds**
+     - `100` ➔ _"cent"_ ➔ **1 pied**
+     - `2026` ➔ _"deux mille vingt-six"_ ➔ **4 pieds**
 
 6. **Ajustement manuel instantané :**
    - En cliquant sur le badge d'une ligne dans la marge gauche, tu peux forcer manuellement le nombre de pieds si tu as un flow spécifique.
@@ -66,16 +64,18 @@ Aucune installation, aucun serveur ni dépendance :
 ---
 
 ## Fichiers
-- [index.html](file:///d:/DATA/01_DEV/01_NOW/lyrr/index.html) : Structure de l'application (Studio + Onglet Genius)
-- [style.css](file:///d:/DATA/01_DEV/01_NOW/lyrr/style.css) : Thème sombre et styles complets (Studio + Genius Formatter)
-- [syllables.js](file:///d:/DATA/01_DEV/01_NOW/lyrr/syllables.js) : Moteur de phonétique française (syllabes, sigles, chiffres)
-- [app.js](file:///d:/DATA/01_DEV/01_NOW/lyrr/app.js) : Logique de l'éditeur, comptage temps réel et optimiseur Genius
+
+- [index.html](lyrr/index.html) : Structure de l'application (Studio + Onglet Genius)
+- [style.css](lyrr/style.css) : Thème sombre et styles complets (Studio + Genius Formatter)
+- [syllables.js](lyrr/syllables.js) : Moteur de phonétique française (syllabes, sigles, chiffres)
+- [app.js](lyrr/app.js) : Logique de l'éditeur, comptage temps réel et optimiseur Genius
 
 ---
 
 ## 🗺️ Roadmap & ToDo
 
 ### ✅ Déjà implémenté (v1.5)
+
 - [x] **Éditeur de texte fluide** avec marge gauche synchronisée au scroll et aux retours à la ligne
 - [x] **Comptage automatique des pieds/syllabes** en temps réel selon les règles phonétiques françaises
 - [x] **Gestion des acronymes & sigles** : détection automatique et prononciation lettre par lettre (`PDG` = 3, `RATP` = 4, `FBI` = 3...)
@@ -91,7 +91,7 @@ Aucune installation, aucun serveur ni dépendance :
 - [x] **100% autonome et local** : s'exécute d'un double-clic sur `index.html`, sans serveur ni dépendance
 
 ### 🚀 Prochaines étapes (v2.0)
+
 - [ ] **Dictionnaire de rimes & assonances local** : suggestion de rimes par proximité phonétique sans connexion internet
 - [ ] **Surlignage visuel des rimes** : code couleur sur les fins de vers qui riment ensemble
 - [ ] **Raccourcis clavier rapides** : pour insérer les tags de structure (`Ctrl+1` Couplet, `Ctrl+2` Refrain, etc.)
-
