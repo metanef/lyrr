@@ -36,8 +36,50 @@
   const toastNotification = document.getElementById('toastNotification');
   const toastMessage = document.getElementById('toastMessage');
 
+  // Tabs Navigation
+  const tabBtnStudio = document.getElementById('tabBtnStudio');
+  const tabBtnGenius = document.getElementById('tabBtnGenius');
+  const tabPaneStudio = document.getElementById('tabPaneStudio');
+  const tabPaneGenius = document.getElementById('tabPaneGenius');
+
+  // Genius Optimizer Selectors
+  const btnGeniusImportStudio = document.getElementById('btnGeniusImportStudio');
+  const btnGeniusApiKey = document.getElementById('btnGeniusApiKey');
+  const apiKeyStatusText = document.getElementById('apiKeyStatusText');
+  const btnGeniusClear = document.getElementById('btnGeniusClear');
+  const btnGeniusFormatLocal = document.getElementById('btnGeniusFormatLocal');
+  const btnGeniusFormatAi = document.getElementById('btnGeniusFormatAi');
+  const formatAiBtnText = document.getElementById('formatAiBtnText');
+
+  const geniusInputLyrics = document.getElementById('geniusInputLyrics');
+  const geniusCharCount = document.getElementById('geniusCharCount');
+
+  const geniusOutputTools = document.getElementById('geniusOutputTools');
+  const btnGeniusSendToStudio = document.getElementById('btnGeniusSendToStudio');
+  const btnGeniusCopy = document.getElementById('btnGeniusCopy');
+  const geniusCopyText = document.getElementById('geniusCopyText');
+
+  const geniusOutputCard = document.getElementById('geniusOutputCard');
+  const geniusStateEmpty = document.getElementById('geniusStateEmpty');
+  const geniusStateLoading = document.getElementById('geniusStateLoading');
+  const geniusOutputLyrics = document.getElementById('geniusOutputLyrics');
+  const geniusErrorBox = document.getElementById('geniusErrorBox');
+  const geniusErrorMessage = document.getElementById('geniusErrorMessage');
+  const btnGeniusFallbackLocal = document.getElementById('btnGeniusFallbackLocal');
+
+  // API Key Modal Selectors
+  const apiKeyModal = document.getElementById('apiKeyModal');
+  const btnCloseApiKeyModal = document.getElementById('btnCloseApiKeyModal');
+  const inputGeminiApiKey = document.getElementById('inputGeminiApiKey');
+  const btnToggleApiKeyVisibility = document.getElementById('btnToggleApiKeyVisibility');
+  const btnRemoveApiKey = document.getElementById('btnRemoveApiKey');
+  const btnCancelApiKey = document.getElementById('btnCancelApiKey');
+  const btnSaveApiKey = document.getElementById('btnSaveApiKey');
+
   // --- État de l'application ---
   const STORAGE_KEY = 'lyrr_studio_songs_v3';
+  const STORAGE_KEY_GEMINI_KEY = 'lyrr_gemini_api_key';
+  const STORAGE_KEY_ACTIVE_TAB = 'lyrr_active_tab';
   const MODE = 'rap';
 
   // Canvas helper pour mesurer précisément la largeur du texte
@@ -642,6 +684,231 @@ J'écris mes textes à la plume`;
     switchSong(currentSong.id);
   }
 
+  // --- Genius Lyrics Optimizer Logic ---
+  const GENIUS_SYSTEM_PROMPT = `
+Persona: Tu es un Éditeur Senior chez Genius.com, expert en transcription et en mise en page de paroles de chansons. Ta mission est de nettoyer et de formater des textes bruts pour qu'ils respectent scrupuleusement le guide de style officiel de la plateforme Genius.
+
+Task: Convertir les paroles brutes fournies par l'utilisateur en un texte parfaitement formaté selon les standards de contribution Genius.
+
+Constraints:
+- Titres de sections : Doivent être entre crochets, ex: [Couplet 1], [Refrain], [Outro]. 
+- Casing : La première lettre de chaque ligne doit être une majuscule. Les titres de sections doivent avoir une majuscule au début (ex: [Chorus] et non [CHORUS]).
+- Ponctuation : Supprime les virgules en fin de ligne. Garde uniquement la ponctuation interne nécessaire à la compréhension. Pas de points finaux en fin de phrase sauf exception rare.
+- Structure : Une seule ligne d'espace entre les sections. Pas d'espaces doubles entre les lignes d'un même couplet.
+- Nettoyage : Supprime les mentions inutiles comme "Repeat x2". À la place, copie-colle la section répétée.
+
+Step-by-Step Instructions:
+1. Analyse : Identifie les différentes parties de la chanson (Intro, Couplets, Refrains, Pont, Outro).
+2. Normalisation des headers : Traduis ou reformate les indicateurs de section en utilisant le format standard [Nom de la section].
+3. Correction de la casse : Applique la majuscule systématique en début de ligne.
+4. Épuration : Retire la ponctuation superflue en fin de ligne (virgules, points).
+5. Vérification : Assure-toi que le texte est fluide et professionnel.
+
+IMPORTANT: Ne renvoie QUE les paroles formitées, sans texte d'introduction ni de conclusion.
+  `.trim();
+
+  function openApiKeyModal() {
+    if (!apiKeyModal) return;
+    const currentKey = localStorage.getItem(STORAGE_KEY_GEMINI_KEY) || '';
+    if (inputGeminiApiKey) inputGeminiApiKey.value = currentKey;
+    apiKeyModal.classList.add('open');
+    if (inputGeminiApiKey) inputGeminiApiKey.focus();
+  }
+
+  function closeApiKeyModal() {
+    if (apiKeyModal) apiKeyModal.classList.remove('open');
+  }
+
+  function updateApiKeyStatus() {
+    const key = (localStorage.getItem(STORAGE_KEY_GEMINI_KEY) || '').trim();
+    if (apiKeyStatusText) {
+      apiKeyStatusText.textContent = key ? 'Clé API ✓' : 'Clé API';
+    }
+    if (btnGeniusApiKey) {
+      if (key) {
+        btnGeniusApiKey.style.borderColor = 'rgba(250, 204, 21, 0.4)';
+        btnGeniusApiKey.style.color = '#facc15';
+      } else {
+        btnGeniusApiKey.style.borderColor = '';
+        btnGeniusApiKey.style.color = '';
+      }
+    }
+  }
+
+  function setGeniusState(state, outputText = '', errorText = '') {
+    if (geniusStateEmpty) geniusStateEmpty.style.display = state === 'empty' ? 'flex' : 'none';
+    if (geniusStateLoading) geniusStateLoading.style.display = state === 'loading' ? 'flex' : 'none';
+    if (geniusOutputLyrics) {
+      geniusOutputLyrics.style.display = state === 'output' ? 'block' : 'none';
+      if (state === 'output') geniusOutputLyrics.textContent = outputText;
+    }
+    if (geniusErrorBox) {
+      geniusErrorBox.style.display = state === 'error' ? 'flex' : 'none';
+      if (state === 'error' && geniusErrorMessage) {
+        geniusErrorMessage.textContent = errorText || "Une erreur est survenue lors du formattage. Veuillez réessayer.";
+      }
+    }
+
+    if (geniusOutputTools) {
+      geniusOutputTools.style.display = state === 'output' ? 'flex' : 'none';
+    }
+
+    if (geniusOutputCard) {
+      if (state === 'output' && outputText) {
+        geniusOutputCard.classList.add('has-content');
+      } else {
+        geniusOutputCard.classList.remove('has-content');
+      }
+    }
+
+    if (btnGeniusFormatAi) {
+      btnGeniusFormatAi.disabled = (state === 'loading') || !geniusInputLyrics.value.trim();
+    }
+    if (formatAiBtnText) {
+      formatAiBtnText.textContent = state === 'loading' ? 'Traitement...' : 'Formater les paroles';
+    }
+  }
+
+  async function formatLyricsWithGemini(rawLyrics) {
+    const apiKey = (localStorage.getItem(STORAGE_KEY_GEMINI_KEY) || '').trim();
+    if (!apiKey) {
+      openApiKeyModal();
+      throw new Error('Veuillez configurer votre clé API Google Gemini pour lancer le formatage IA (ou utilisez les Règles Locales).');
+    }
+
+    const delays = [1000, 2000, 4000, 8000, 16000];
+    const maxRetries = 5;
+    let retryCount = 0;
+
+    const modelsToTry = [
+      'gemini-2.5-flash-preview-09-2025',
+      'gemini-2.0-flash',
+      'gemini-1.5-flash'
+    ];
+
+    async function callApi(modelIdx = 0) {
+      const modelName = modelsToTry[modelIdx] || 'gemini-1.5-flash';
+      try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: rawLyrics }] }],
+            systemInstruction: { parts: [{ text: GENIUS_SYSTEM_PROMPT }] }
+          })
+        });
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          const errMsg = errData.error?.message || `Erreur HTTP ${response.status}`;
+          if ((response.status === 404 || errMsg.toLowerCase().includes('not found')) && modelIdx < modelsToTry.length - 1) {
+            console.warn(`Modèle ${modelName} indisponible, essai avec ${modelsToTry[modelIdx + 1]}...`);
+            return callApi(modelIdx + 1);
+          }
+          throw new Error(errMsg);
+        }
+
+        const data = await response.json();
+        const formatted = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        if (!formatted) throw new Error("Réponse vide renvoyée par le modèle.");
+        return formatted.trim();
+      } catch (err) {
+        if (retryCount < maxRetries) {
+          await new Promise(res => setTimeout(res, delays[retryCount]));
+          retryCount++;
+          return callApi(modelIdx);
+        }
+        throw err;
+      }
+    }
+
+    return await callApi(0);
+  }
+
+  function formatLyricsLocal(raw) {
+    if (!raw || !raw.trim()) return '';
+
+    const linesRaw = raw.split(/\r?\n/);
+    const processedLines = [];
+
+    const HEADER_REGEX = /^(?:\[|\()? *(intro|couplet(?:\s*\d+)?|verse(?:\s*\d+)?|refrain|chorus|hook|pont|bridge|outro|pre-refrain|pr[ée]-chorus) *(?:\:|\-)? *(?:\]|\))? *$/i;
+
+    function normalizeHeader(str) {
+      const m = str.match(HEADER_REGEX);
+      if (!m) return null;
+      const name = m[1].toLowerCase().trim();
+      if (name.includes('intro')) return '[Intro]';
+      if (name.includes('outro')) return '[Outro]';
+      if (name.includes('refrain') || name.includes('chorus') || name.includes('hook')) return '[Refrain]';
+      if (name.includes('pont') || name.includes('bridge')) return '[Pont]';
+      if (name.includes('pre') || name.includes('pré')) return '[Pré-refrain]';
+      if (name.includes('couplet') || name.includes('verse')) {
+        const num = name.replace(/[^0-9]/g, '');
+        return num ? `[Couplet ${num}]` : '[Couplet]';
+      }
+      return null;
+    }
+
+    let lastWasEmpty = false;
+
+    for (let i = 0; i < linesRaw.length; i++) {
+      let line = linesRaw[i].trim();
+
+      if (!line) {
+        if (!lastWasEmpty && processedLines.length > 0) {
+          processedLines.push('');
+          lastWasEmpty = true;
+        }
+        continue;
+      }
+
+      const normHeader = normalizeHeader(line);
+      if (normHeader) {
+        if (processedLines.length > 0 && !lastWasEmpty) {
+          processedLines.push('');
+        }
+        processedLines.push(normHeader);
+        lastWasEmpty = false;
+        continue;
+      }
+
+      let repeatMatch = line.match(/\s*\(?(?:x\s*(\d+)|repeat\s*x?\s*(\d+))\)?$/i);
+      let repeatCount = 1;
+      if (repeatMatch) {
+        repeatCount = parseInt(repeatMatch[1] || repeatMatch[2] || '2', 10);
+        line = line.replace(/\s*\(?(?:x\s*(\d+)|repeat\s*x?\s*(\d+))\)?$/i, '').trim();
+      }
+
+      line = line.replace(/[,;.:]+$/, '');
+
+      if (line.length > 0) {
+        line = line.charAt(0).toUpperCase() + line.slice(1);
+      }
+
+      for (let r = 0; r < repeatCount; r++) {
+        processedLines.push(line);
+      }
+      lastWasEmpty = false;
+    }
+
+    return processedLines.join('\n');
+  }
+
+  function switchTab(tabId) {
+    if (tabId === 'genius') {
+      tabBtnStudio.classList.remove('active');
+      tabBtnGenius.classList.add('active');
+      tabPaneStudio.classList.remove('active');
+      tabPaneGenius.classList.add('active');
+    } else {
+      tabBtnGenius.classList.remove('active');
+      tabBtnStudio.classList.add('active');
+      tabPaneGenius.classList.remove('active');
+      tabPaneStudio.classList.add('active');
+    }
+    localStorage.setItem(STORAGE_KEY_ACTIVE_TAB, tabId);
+  }
+
   // --- Initialisation générale ---
   function init() {
     loadStoredData();
@@ -731,6 +998,163 @@ J'écris mes textes à la plume`;
         legendBarWrapper.classList.toggle('collapsed');
       });
     }
+
+    // Tabs Navigation
+    tabBtnStudio.addEventListener('click', () => switchTab('studio'));
+    tabBtnGenius.addEventListener('click', () => switchTab('genius'));
+    const savedTab = localStorage.getItem(STORAGE_KEY_ACTIVE_TAB) || 'studio';
+    switchTab(savedTab);
+
+    // Genius Formatter Handlers
+    updateApiKeyStatus();
+
+    geniusInputLyrics.addEventListener('input', () => {
+      const len = geniusInputLyrics.value.length;
+      geniusCharCount.textContent = `${len} caractère${len > 1 ? 's' : ''}`;
+      if (btnGeniusFormatAi) {
+        btnGeniusFormatAi.disabled = !geniusInputLyrics.value.trim();
+      }
+    });
+
+    btnGeniusClear.addEventListener('click', () => {
+      geniusInputLyrics.value = '';
+      geniusCharCount.textContent = '0 caractères';
+      setGeniusState('empty');
+    });
+
+    btnGeniusImportStudio.addEventListener('click', () => {
+      const studioText = lines.join('\n').trim();
+      if (!studioText) {
+        showToast('Le Studio est vide !');
+        return;
+      }
+      geniusInputLyrics.value = studioText;
+      const len = studioText.length;
+      geniusCharCount.textContent = `${len} caractère${len > 1 ? 's' : ''}`;
+      if (btnGeniusFormatAi) btnGeniusFormatAi.disabled = false;
+      showToast('Paroles importées depuis le Studio !');
+    });
+
+    btnGeniusSendToStudio.addEventListener('click', () => {
+      const output = geniusOutputLyrics.textContent.trim();
+      if (!output) return;
+      if (currentSong) {
+        currentSong.content = output;
+        lines = output.split('\n');
+        if (lines.length === 0) lines = [''];
+        saveSongs();
+        renderAllLines(0, 0);
+        showToast('Paroles transférées vers le Studio !');
+        switchTab('studio');
+      }
+    });
+
+    btnGeniusCopy.addEventListener('click', () => {
+      const textToCopy = geniusOutputLyrics.textContent;
+      if (!textToCopy) return;
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(textToCopy).then(() => {
+          showGeniusCopied();
+        }).catch(() => fallbackCopy(textToCopy));
+      } else {
+        fallbackCopy(textToCopy);
+      }
+
+      function fallbackCopy(val) {
+        const ta = document.createElement('textarea');
+        ta.value = val;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showGeniusCopied();
+      }
+
+      function showGeniusCopied() {
+        geniusCopyText.textContent = 'Copié !';
+        btnGeniusCopy.classList.add('copied');
+        showToast('Format Genius copié dans le presse-papier !');
+        setTimeout(() => {
+          geniusCopyText.textContent = 'Copier';
+          btnGeniusCopy.classList.remove('copied');
+        }, 2000);
+      }
+    });
+
+    // Formatage Local (Règles sans IA)
+    btnGeniusFormatLocal.addEventListener('click', () => {
+      const raw = geniusInputLyrics.value.trim();
+      if (!raw) {
+        showToast('Collez d\'abord vos paroles brutes.');
+        return;
+      }
+      const formatted = formatLyricsLocal(raw);
+      setGeniusState('output', formatted);
+      showToast('Formaté avec les règles Genius !');
+    });
+
+    btnGeniusFallbackLocal.addEventListener('click', () => {
+      const raw = geniusInputLyrics.value.trim();
+      if (!raw) return;
+      const formatted = formatLyricsLocal(raw);
+      setGeniusState('output', formatted);
+    });
+
+    // Formatage IA (Gemini 2.5 Flash)
+    btnGeniusFormatAi.addEventListener('click', async () => {
+      const raw = geniusInputLyrics.value.trim();
+      if (!raw) return;
+
+      setGeniusState('loading');
+      try {
+        const formatted = await formatLyricsWithGemini(raw);
+        setGeniusState('output', formatted);
+        showToast('Paroles formatées avec succès par Gemini !');
+      } catch (err) {
+        console.error('Erreur Genius AI Formatter:', err);
+        setGeniusState('error', '', err.message || "Une erreur est survenue lors du formattage.");
+      }
+    });
+
+    // Modal Clé API
+    btnGeniusApiKey.addEventListener('click', openApiKeyModal);
+    btnCloseApiKeyModal.addEventListener('click', closeApiKeyModal);
+    btnCancelApiKey.addEventListener('click', closeApiKeyModal);
+    apiKeyModal.addEventListener('click', (e) => {
+      if (e.target === apiKeyModal) closeApiKeyModal();
+    });
+
+    btnToggleApiKeyVisibility.addEventListener('click', () => {
+      if (inputGeminiApiKey.type === 'password') {
+        inputGeminiApiKey.type = 'text';
+        btnToggleApiKeyVisibility.textContent = 'Masquer';
+      } else {
+        inputGeminiApiKey.type = 'password';
+        btnToggleApiKeyVisibility.textContent = 'Afficher';
+      }
+    });
+
+    btnSaveApiKey.addEventListener('click', () => {
+      const keyVal = inputGeminiApiKey.value.trim();
+      if (keyVal) {
+        localStorage.setItem(STORAGE_KEY_GEMINI_KEY, keyVal);
+        showToast('Clé API enregistrée localement !');
+      } else {
+        localStorage.removeItem(STORAGE_KEY_GEMINI_KEY);
+        showToast('Clé API supprimée.');
+      }
+      updateApiKeyStatus();
+      closeApiKeyModal();
+    });
+
+    btnRemoveApiKey.addEventListener('click', () => {
+      localStorage.removeItem(STORAGE_KEY_GEMINI_KEY);
+      inputGeminiApiKey.value = '';
+      updateApiKeyStatus();
+      closeApiKeyModal();
+      showToast('Clé API supprimée.');
+    });
 
     initEditorEvents();
     renderAllLines(0, 0);

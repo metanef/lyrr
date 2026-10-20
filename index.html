@@ -28,6 +28,24 @@
       </div>
     </div>
 
+    <!-- Navigation Onglets -->
+    <nav class="app-nav-tabs">
+      <button id="tabBtnStudio" class="nav-tab-btn active" data-tab="studio" title="Bloc-notes Lyrics & Compteur de Syllabes">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M12 20h9"></path>
+          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+        </svg>
+        <span>Studio Lyrics</span>
+      </button>
+      <button id="tabBtnGenius" class="nav-tab-btn" data-tab="genius" title="Optimiseur de Paroles selon le standard officiel Genius.com">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+        </svg>
+        <span>Genius Optimizer</span>
+        <span class="tab-tag-genius">IA</span>
+      </button>
+    </nav>
+
     <!-- Song Title & Auto-Save -->
     <div class="project-section">
       <div class="title-input-wrapper">
@@ -99,79 +117,296 @@
       </div>
   </header>
 
-  <!-- Bandeau Dépliable : Code couleur des types de mots (Sous le header, déplié de base) -->
-  <div id="legendBarWrapper" class="legend-bar-wrapper">
-    <div id="legendToggleBtn" class="legend-bar-header" title="Cliquer pour afficher ou replier le code couleur">
-      <div class="legend-header-left">
-        <svg class="legend-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <circle cx="12" cy="12" r="10"></circle>
-          <line x1="12" y1="16" x2="12" y2="12"></line>
-          <line x1="12" y1="8" x2="12.01" y2="8"></line>
-        </svg>
-        <span>Code couleur des mots</span>
+  <!-- Onglet 1: Studio Lyrics (Compteur de pieds) -->
+  <div id="tabPaneStudio" class="tab-pane active">
+    <!-- Bandeau Dépliable : Code couleur des types de mots (Sous le header, déplié de base) -->
+    <div id="legendBarWrapper" class="legend-bar-wrapper">
+      <div id="legendToggleBtn" class="legend-bar-header" title="Cliquer pour afficher ou replier le code couleur">
+        <div class="legend-header-left">
+          <svg class="legend-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          <span>Code couleur des mots</span>
+        </div>
+        <button class="legend-toggle-btn" aria-label="Replier ou déplier">
+          <svg class="chevron-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
       </div>
-      <button class="legend-toggle-btn" aria-label="Replier ou déplier">
-        <svg class="chevron-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="6 9 12 15 18 9"></polyline>
-        </svg>
-      </button>
+
+      <div class="legend-content" id="legendContent">
+        <div class="legend-item">
+          <div class="word-chip">
+            <span class="chip-token">heu·reux</span>
+            <span class="chip-count">2</span>
+          </div>
+          <span class="legend-label"><strong>Mots standards :</strong> texte normal (découpage des pieds avec <code>·</code>)</span>
+        </div>
+        <div class="legend-item">
+          <div class="word-chip acronym">
+            <span class="chip-token">P·D·G</span>
+            <span class="chip-count">3</span>
+          </div>
+          <span class="legend-label"><strong>Sigles & Acronymes (bleu cyan) :</strong> épelés lettre par lettre (ex : <em>P·D·G</em>, <em>F·B·I</em>, <em>R·A·T·P</em>)</span>
+        </div>
+        <div class="legend-item">
+          <div class="word-chip number">
+            <span class="chip-token">14</span>
+            <span class="chip-count">2</span>
+          </div>
+          <span class="legend-label"><strong>Chiffres & Nombres (orange) :</strong> convertis phonétiquement (ex : <em>14</em> ➔ <em>qua·torze</em>)</span>
+        </div>
+      </div>
     </div>
 
-    <div class="legend-content" id="legendContent">
-      <div class="legend-item">
-        <div class="word-chip">
-          <span class="chip-token">heu·reux</span>
-          <span class="chip-count">2</span>
+    <!-- Main Workspace -->
+    <main class="workspace-container">
+      <div class="editor-card">
+        <!-- Editor Top Stats Bar -->
+        <div class="editor-top-bar">
+          <div class="editor-info-left">
+            <div class="stat-pill">
+              <span>Vers :</span>
+              <strong id="statLineCount">0</strong>
+            </div>
+            <div class="stat-pill">
+              <span>Total pieds :</span>
+              <strong id="statSyllableCount">0</strong>
+            </div>
+            <div class="stat-pill">
+              <span>Moyenne/ligne :</span>
+              <strong id="statAvgCount">0</strong>
+            </div>
+          </div>
+          <div class="editor-hint">
+            <span>💡 Clique sur une ligne pour afficher sa décomposition entre les vers</span>
+          </div>
         </div>
-        <span class="legend-label"><strong>Mots standards :</strong> texte normal (découpage des pieds avec <code>·</code>)</span>
-      </div>
-      <div class="legend-item">
-        <div class="word-chip acronym">
-          <span class="chip-token">P·D·G</span>
-          <span class="chip-count">3</span>
+
+        <!-- Line-by-Line Document Editor -->
+        <div id="editorLinesContainer" class="editor-lines-container">
+          <!-- Rendu dynamique des lignes avec ligne de décomposition insérée -->
         </div>
-        <span class="legend-label"><strong>Sigles & Acronymes (bleu cyan) :</strong> épelés lettre par lettre (ex : <em>P·D·G</em>, <em>F·B·I</em>, <em>R·A·T·P</em>)</span>
       </div>
-      <div class="legend-item">
-        <div class="word-chip number">
-          <span class="chip-token">14</span>
-          <span class="chip-count">2</span>
-        </div>
-        <span class="legend-label"><strong>Chiffres & Nombres (orange) :</strong> convertis phonétiquement (ex : <em>14</em> ➔ <em>qua·torze</em>)</span>
-      </div>
-    </div>
+    </main>
   </div>
 
-  <!-- Main Workspace -->
-  <main class="workspace-container">
-    <div class="editor-card">
-      <!-- Editor Top Stats Bar -->
-      <div class="editor-top-bar">
-        <div class="editor-info-left">
-          <div class="stat-pill">
-            <span>Vers :</span>
-            <strong id="statLineCount">0</strong>
+  <!-- Onglet 2: Genius Lyrics Optimizer -->
+  <div id="tabPaneGenius" class="tab-pane">
+    <div class="genius-container">
+      
+      <!-- Top Action Bar -->
+      <div class="genius-top-bar">
+        <div class="genius-brand">
+          <div class="genius-badge-icon" title="Genius Formatter">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M9 18V5l12-2v13"></path>
+              <circle cx="6" cy="18" r="3"></circle>
+              <circle cx="18" cy="16" r="3"></circle>
+            </svg>
           </div>
-          <div class="stat-pill">
-            <span>Total pieds :</span>
-            <strong id="statSyllableCount">0</strong>
-          </div>
-          <div class="stat-pill">
-            <span>Moyenne/ligne :</span>
-            <strong id="statAvgCount">0</strong>
+          <div>
+            <h2 class="genius-title">Genius Formatter <span class="genius-senior-tag">Standard Senior</span></h2>
+            <p class="genius-subtitle">Nettoyage et mise en page selon le guide officiel Genius.com</p>
           </div>
         </div>
-        <div class="editor-hint">
-          <span>💡 Clique sur une ligne pour afficher sa décomposition entre les vers</span>
+
+        <div class="genius-actions">
+          <button id="btnGeniusImportStudio" class="btn-action" title="Importer le texte du Studio Lyrics">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span>Importer du Studio</span>
+          </button>
+          
+          <button id="btnGeniusApiKey" class="btn-action" title="Configurer la clé API Google Gemini">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="7.5" cy="15.5" r="5.5"></circle>
+              <path d="m21 2-9.6 9.6"></path>
+              <path d="m15.5 7.5 3 3L22 7l-3-3"></path>
+            </svg>
+            <span id="apiKeyStatusText">Clé API</span>
+          </button>
+
+          <button id="btnGeniusClear" class="btn-action" title="Effacer tout">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+            <span>Effacer</span>
+          </button>
+
+          <button id="btnGeniusFormatLocal" class="btn-action" title="Formatage instantané basé sur les règles Genius (local, sans clé)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
+            <span>Règles locales</span>
+          </button>
+
+          <button id="btnGeniusFormatAi" class="btn-action genius-primary-btn" title="Formatage complet par IA Gemini 2.5 Flash">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z"></path>
+              <path d="m14 7 3 3"></path>
+              <path d="M5 6v4"></path>
+              <path d="M19 14v4"></path>
+            </svg>
+            <span id="formatAiBtnText">Formater les paroles</span>
+          </button>
         </div>
       </div>
 
-      <!-- Line-by-Line Document Editor -->
-      <div id="editorLinesContainer" class="editor-lines-container">
-        <!-- Rendu dynamique des lignes avec ligne de décomposition insérée -->
+      <!-- Main Columns Grid -->
+      <div class="genius-grid">
+        
+        <!-- Left Panel: Paroles Brutes -->
+        <div class="genius-panel">
+          <div class="genius-panel-header">
+            <label for="geniusInputLyrics" class="genius-panel-label">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+              <span>Paroles Brutes</span>
+            </label>
+            <span id="geniusCharCount" class="genius-char-count">0 caractères</span>
+          </div>
+          <div class="genius-textarea-wrapper">
+            <textarea id="geniusInputLyrics" class="genius-textarea" placeholder="Collez ici vos paroles (ex: [CHORUS] je marche dans la ville,&#10;il fait beau...)"></textarea>
+          </div>
+        </div>
+
+        <!-- Right Panel: Format Genius -->
+        <div class="genius-panel">
+          <div class="genius-panel-header">
+            <div class="genius-panel-label success">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              <span>Format Genius</span>
+            </div>
+            <div class="genius-output-tools" id="geniusOutputTools" style="display: none;">
+              <button id="btnGeniusSendToStudio" class="btn-action small" title="Remplacer le texte du Studio par ce texte formaté">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M5 12h14"></path>
+                  <path d="m12 5 7 7-7 7"></path>
+                </svg>
+                <span>Renvoyer au Studio</span>
+              </button>
+              <button id="btnGeniusCopy" class="btn-action small genius-copy-btn">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                <span id="geniusCopyText">Copier</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="genius-output-card" id="geniusOutputCard">
+            <!-- État vide -->
+            <div id="geniusStateEmpty" class="genius-state-empty">
+              <svg class="empty-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M9 18V5l12-2v13"></path>
+                <circle cx="6" cy="18" r="3"></circle>
+                <circle cx="18" cy="16" r="3"></circle>
+              </svg>
+              <p>Les paroles formatées selon les standards Genius apparaîtront ici</p>
+            </div>
+
+            <!-- État chargement IA -->
+            <div id="geniusStateLoading" class="genius-state-loading" style="display: none;">
+              <div class="wand-spinner">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z"></path>
+                  <path d="m14 7 3 3"></path>
+                  <path d="M5 6v4"></path>
+                  <path d="M19 14v4"></path>
+                </svg>
+              </div>
+              <p class="loading-title">L'éditeur Senior analyse et formate votre texte...</p>
+              <p class="loading-sub">Nettoyage des headers, casse, ponctuation et répétitions</p>
+            </div>
+
+            <!-- Sortie formatée -->
+            <pre id="geniusOutputLyrics" class="genius-pre" style="display: none;"></pre>
+
+            <!-- Message d'erreur -->
+            <div id="geniusErrorBox" class="genius-error-box" style="display: none;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              <div class="error-text">
+                <strong id="geniusErrorTitle">Erreur lors du formatage</strong>
+                <p id="geniusErrorMessage"></p>
+                <button id="btnGeniusFallbackLocal" class="btn-action small" style="margin-top: 6px;">
+                  Utiliser le formatage local instantané
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
+
+      <!-- Guidelines Reminder Footer -->
+      <footer class="genius-guidelines">
+        <h3 class="guidelines-title">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          Standards Officiels Genius Appliqués
+        </h3>
+        <div class="guidelines-grid">
+          <div class="guideline-card">
+            <div class="guideline-header">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+              <strong>Headers [Crochets]</strong>
+            </div>
+            <p>Titres de sections entre crochets : <code>[Couplet 1]</code>, <code>[Refrain]</code>, <code>[Intro]</code>, <code>[Outro]</code>.</p>
+          </div>
+          <div class="guideline-card">
+            <div class="guideline-header">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+              <strong>Majuscule par ligne</strong>
+            </div>
+            <p>La première lettre de chaque vers commence obligatoirement par une majuscule.</p>
+          </div>
+          <div class="guideline-card">
+            <div class="guideline-header">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+              <strong>Ponctuation épurée</strong>
+            </div>
+            <p>Suppression des virgules et points finaux superflus en bout de vers.</p>
+          </div>
+          <div class="guideline-card">
+            <div class="guideline-header">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+              <strong>Répétitions étendues</strong>
+            </div>
+            <p>Les mentions type "x2" ou "Repeat" sont remplacées par la section dupliquée en entier.</p>
+          </div>
+        </div>
+      </footer>
+
     </div>
-  </main>
+  </div>
 
   <!-- Modal Gestion des Projets -->
   <div id="projectsModal" class="modal-overlay">
@@ -198,6 +433,60 @@
           </svg>
           <span>Nouveau texte</span>
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Configuration Clé API Gemini -->
+  <div id="apiKeyModal" class="modal-overlay">
+    <div class="modal-box api-key-modal-box">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #facc15;">
+            <circle cx="7.5" cy="15.5" r="5.5"></circle>
+            <path d="m21 2-9.6 9.6"></path>
+            <path d="m15.5 7.5 3 3L22 7l-3-3"></path>
+          </svg>
+          <h3>Configuration Clé API Gemini</h3>
+        </div>
+        <button id="btnCloseApiKeyModal" class="btn-icon-sm">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body" style="display: flex; flex-direction: column; gap: 14px; padding: 16px 0;">
+        <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin: 0;">
+          Pour exécuter le prompt IA <strong>Gemini 2.5 Flash</strong> de l'Éditeur Senior Genius, renseigne ta clé API Google. 
+          Elle est stockée uniquement en local dans ton navigateur (<code>localStorage</code>) et n'est jamais transmise ailleurs.
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <label for="inputGeminiApiKey" style="font-size: 12px; font-weight: 600; color: var(--text-main);">Clé API Google :</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="password" id="inputGeminiApiKey" class="input-text-key" placeholder="AIzaSy..." spellcheck="false" autocomplete="off" style="flex: 1; background: rgba(22, 30, 51, 0.8); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 8px 12px; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 13px;">
+            <button id="btnToggleApiKeyVisibility" class="btn-action" type="button" style="white-space: nowrap;">Afficher</button>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-dim); background: rgba(255, 255, 255, 0.04); padding: 8px 12px; border-radius: var(--radius-sm);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #facc15; flex-shrink: 0;">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          <span>Clé 100% gratuite sur <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" style="color: #facc15; text-decoration: underline;">Google AI Studio</a>.</span>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 10px; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid var(--border-subtle);">
+        <button id="btnRemoveApiKey" class="btn-action" style="color: var(--accent-rose);">Supprimer la clé</button>
+        <div style="display: flex; gap: 8px;">
+          <button id="btnCancelApiKey" class="btn-action">Annuler</button>
+          <button id="btnSaveApiKey" class="btn-action primary">Enregistrer</button>
+        </div>
       </div>
     </div>
   </div>

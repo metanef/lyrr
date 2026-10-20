@@ -53,18 +53,22 @@ Créer une application web légère, esthétique et autonome sous forme d'un sim
   - Gestionnaire multi-textes (créer, charger, supprimer plusieurs projets de chansons).
   - Copie rapide (texte brut ou avec les pieds `[4]`) et téléchargement `.txt`.
 
-- [x] **Tâche 5 : Tests & Validation**
+- [x] **Tâche 6 : Intégration de l'onglet Genius Lyrics Optimizer**
+  - Navigation par onglets dans le header (Studio Lyrics ↔ Genius Optimizer).
+  - Formatage IA Gemini 2.5 Flash avec le persona Éditeur Senior Genius et backoff exponentiel (5 essais).
+  - Moteur local hors-ligne de règles Genius (formatage instantané sans clé ni internet).
+  - Synchronisation bidirectionnelle (Importer du Studio, Renvoyer au Studio).
+  - Gestion sécurisée de la clé API Google dans le `localStorage`.
+
+- [x] **Tâche 7 : Tests & Validation**
   - Validation logique via Node.js réussie.
   - Fonctionne en local direct par double-clic sur `index.html`.
 
 ---
 
 ## 4. Prochaines évolutions (v2.0)
-- [ ] **Intégration du Genius Lyrics Optimizer (Tout-en-un local)** :
-  - Nettoyage et formatage selon les conventions Genius (majuscules en début de ligne, suppression de ponctuation inutile, formatage des ad-libs entre parenthèses).
-  - Détection et insertion des balises de sections (`[Couplet 1]`, `[Refrain]`, `[Pont]`, etc.).
 - [ ] Dictionnaire de rimes & assonances local.
-- [ ] Raccourcis clavier pour insérer les balises de structure.
+- [ ] Raccourcis clavier pour insérer les balises de structure (`Ctrl+1`, `Ctrl+2`).
 
 ---
 

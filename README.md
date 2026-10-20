@@ -52,24 +52,34 @@ Aucune installation, aucun serveur ni dépendance :
    - **Projets** : bouton en haut pour créer et basculer entre plusieurs chansons.
    - **Export** : copier le texte brut, copier avec les mesures `[4]`, ou télécharger un fichier `.txt`.
 
+8. **Onglet Genius Lyrics Optimizer (IA Gemini + Règles Locales) :**
+   - Bascule immédiate entre **Studio Lyrics** et **Genius Optimizer** depuis la barre de navigation supérieure.
+   - **Moteur IA Gemini 2.5 Flash :** utilise le persona d'Éditeur Senior Genius pour restructurer et formater des textes bruts selon le guide de contribution officiel Genius.
+   - **Moteur Local Rapide (Hors-ligne / Sans clé) :** nettoie instantanément la casse, les en-têtes `[Couplet 1]`, `[Refrain]`, la ponctuation de fin de ligne et étend les répétitions `x2`.
+   - **Synchronisation bidirectionnelle :** bouton "Importer du Studio" pour charger vos lyrics en un clic, et bouton "Envoyer au Studio" pour réinjecter le texte propre dans l'éditeur de pieds.
+   - **Gestion de clé API Google :** stockée 100% en local dans votre navigateur.
+
 ---
 
 ## Fichiers
-- [index.html](file:///d:/DATA/01_DEV/01_NOW/lyrr/index.html) : Structure de l'application
-- [style.css](file:///d:/DATA/01_DEV/01_NOW/lyrr/style.css) : Thème sombre et styles de l'éditeur
+- [index.html](file:///d:/DATA/01_DEV/01_NOW/lyrr/index.html) : Structure de l'application (Studio + Onglet Genius)
+- [style.css](file:///d:/DATA/01_DEV/01_NOW/lyrr/style.css) : Thème sombre et styles complets (Studio + Genius Formatter)
 - [syllables.js](file:///d:/DATA/01_DEV/01_NOW/lyrr/syllables.js) : Moteur de phonétique française (syllabes, sigles, chiffres)
-- [app.js](file:///d:/DATA/01_DEV/01_NOW/lyrr/app.js) : Synchronisation de l'affichage sur la ligne active et sauvegarde
+- [app.js](file:///d:/DATA/01_DEV/01_NOW/lyrr/app.js) : Logique de l'éditeur, comptage temps réel et optimiseur Genius
 
 ---
 
 ## 🗺️ Roadmap & ToDo
 
-### ✅ Déjà implémenté (v1.0)
+### ✅ Déjà implémenté (v1.5)
 - [x] **Éditeur de texte fluide** avec marge gauche synchronisée au scroll et aux retours à la ligne
 - [x] **Comptage automatique des pieds/syllabes** en temps réel selon les règles phonétiques françaises
 - [x] **Gestion des acronymes & sigles** : détection automatique et prononciation lettre par lettre (`PDG` = 3, `RATP` = 4, `FBI` = 3...)
 - [x] **Gestion des nombres en chiffres** : conversion phonétique instantanée (`14` = 2, `100` = 1, `2026` = 4...)
-- [x] **Décomposition sur la ligne active** : affichage au bout du vers cliqué sans perturber la frappe
+- [x] **Décomposition sur la ligne active** : affichage intercalé entre les vers avec sous-découpe (`·`)
+- [x] **Code couleur épuré & légende dépliable** sous le header (sans mentions textuelles encombrantes)
+- [x] **Onglet Genius Lyrics Optimizer intégré** (IA Gemini 2.5 Flash + moteur de règles locales hors-ligne)
+- [x] **Synchronisation bidirectionnelle Studio ↔ Genius**
 - [x] **Ajustement manuel** : clic sur le badge d'un vers pour forcer un nombre de pieds particulier
 - [x] **Sauvegarde locale automatique** (`localStorage`) pour ne jamais perdre ses sessions
 - [x] **Gestionnaire multi-projets** : créer, basculer et gérer plusieurs textes
@@ -77,11 +87,6 @@ Aucune installation, aucun serveur ni dépendance :
 - [x] **100% autonome et local** : s'exécute d'un double-clic sur `index.html`, sans serveur ni dépendance
 
 ### 🚀 Prochaines étapes (v2.0)
-- [ ] **Intégration du Genius Lyrics Optimizer (Tout-en-un local)** :
-  - Intégrer les fonctionnalités du Genius Lyrics Optimizer directement dans l'application
-  - Formatage et nettoyage automatique selon les règles de style Genius (gestion de la casse, ponctuation superflue, formatage des ad-libs)
-  - Détection et insertion automatique des balises de sections : `[Intro]`, `[Couplet 1]`, `[Pré-refrain]`, `[Refrain]`, `[Pont]`, `[Outro]`
-  - Normalisation des retours à la ligne et espaces pour les soumissions Genius
 - [ ] **Dictionnaire de rimes & assonances local** : suggestion de rimes par proximité phonétique sans connexion internet
 - [ ] **Surlignage visuel des rimes** : code couleur sur les fins de vers qui riment ensemble
 - [ ] **Raccourcis clavier rapides** : pour insérer les tags de structure (`Ctrl+1` Couplet, `Ctrl+2` Refrain, etc.)
