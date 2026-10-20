@@ -186,11 +186,12 @@ J'écris mes textes à la plume`;
       const lineText = lines[i];
       const lineNum = i + 1;
       const isActive = (i === activeLineIndex);
+      const isTag = /^\[[^\]]+\]$/.test(lineText.trim());
 
       let syllableResult = null;
       let count = 0;
 
-      if (lineText.trim().length > 0) {
+      if (lineText.trim().length > 0 && !isTag) {
         totalLinesCount++;
         if (overrides[i] !== undefined) {
           count = overrides[i];
@@ -217,9 +218,9 @@ J'écris mes textes à la plume`;
         meterClass = 'meter-short';
       }
 
-      // Ligne de décomposition : uniquement sur la ligne active quand elle contient du texte
+      // Ligne de décomposition : uniquement sur la ligne active quand elle contient du texte et n'est pas un tag
       let breakdownHtml = '';
-      if (isActive && lineText.trim().length > 0) {
+      if (isActive && lineText.trim().length > 0 && !isTag) {
         if (!syllableResult) {
           syllableResult = LyrrSyllables.countLineSyllables(lineText, MODE);
         }
@@ -252,17 +253,27 @@ J'écris mes textes à la plume`;
 
       const rowActiveClass = isActive ? 'active' : '';
       const inputWidth = Math.max(80, Math.round(measureTextWidth(lineText)) + 24);
+      const inputExtraClass = isTag ? 'section-tag-input' : '';
+
+      let badgeHtml = '';
+      if (isTag) {
+        badgeHtml = `<span class="syllable-badge tag-badge" title="Tag de structure">TAG</span>`;
+      } else {
+        badgeHtml = `
+          <span class="syllable-badge ${meterClass}" data-line="${i}" title="${count > 0 ? `${count} pieds (clic pour ajuster)` : ''}">
+            ${count > 0 ? count : ''}
+          </span>
+        `;
+      }
 
       html += `
         <div class="line-row ${rowActiveClass}" data-index="${i}">
           <div class="line-gutter">
-            <span class="syllable-badge ${meterClass}" data-line="${i}" title="${count > 0 ? `${count} pieds (clic pour ajuster)` : ''}">
-              ${count > 0 ? count : ''}
-            </span>
+            ${badgeHtml}
           </div>
           <div class="line-main">
             ${breakdownHtml}
-            <input type="text" class="line-input" data-index="${i}" style="width: ${inputWidth}px;" value="${escapeHtml(lineText)}" spellcheck="false" autocomplete="off" placeholder="${i === 0 ? 'Écris tes lyrics ici...' : ''}">
+            <input type="text" class="line-input ${inputExtraClass}" data-index="${i}" style="width: ${inputWidth}px;" value="${escapeHtml(lineText)}" spellcheck="false" autocomplete="off" placeholder="${i === 0 ? 'Écris tes lyrics ici...' : ''}">
           </div>
         </div>
       `;
@@ -346,7 +357,18 @@ J'écris mes textes à la plume`;
       }
     });
 
-    // Navigation clavier (Enter, Backspace, Delete, Flèches)
+    function shiftOverrides(fromIndex, delta) {
+      if (!currentSong || !currentSong.overrides) return;
+      const newOverrides = {};
+      for (const [k, v] of Object.entries(currentSong.overrides)) {
+        const ki = parseInt(k, 10);
+        if (ki <= fromIndex) newOverrides[ki] = v;
+        else newOverrides[ki + delta] = v;
+      }
+      currentSong.overrides = newOverrides;
+    }
+
+    // Navigation clavier et raccourcis rapides
     editorLinesContainer.addEventListener('keydown', (e) => {
       const input = e.target.closest('.line-input');
       if (!input) return;
@@ -356,6 +378,181 @@ J'écris mes textes à la plume`;
       const start = input.selectionStart;
       const end = input.selectionEnd;
 
+      // ======================================================================
+      // RACCOURCIS CLAVIER RAPIDES (Tags de structure, Ad-libs, Édition)
+      // ======================================================================
+
+      // ALT + 1..6 : Insertion intelligente de tags de structure
+      if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+        let tag = null;
+        if (e.key === '1') {
+          // Compter les couplets existants pour auto-incrémentation [Couplet 1], [Couplet 2]...
+          let coupletCount = 0;
+          for (let c = 0; c < lines.length; c++) {
+            if (/^\[Couplet(?:\s+(\d+))?/i.test(lines[c].trim())) coupletCount++;
+          }
+          tag = coupletCount > 0 ? `[Couplet ${coupletCount + 1}]` : '[Couplet 1]';
+        } else if (e.key === '2') {
+          tag = '[Refrain]';
+        } else if (e.key === '3') {
+          tag = '[Pré]';
+        } else if (e.key === '4') {
+          tag = '[Pont]';
+        } else if (e.key === '5') {
+          tag = '[Intro]';
+        } else if (e.key === '6') {
+          tag = '[Outro]';
+        }
+
+        if (tag) {
+          e.preventDefault();
+          if (!val.trim()) {
+            // Ligne vide : devient le tag, et crée une ligne vide en-dessous prête à écrire
+            lines[index] = tag;
+            lines.splice(index + 1, 0, '');
+            shiftOverrides(index, 1);
+            scheduleAutoSave();
+            renderAllLines(index + 1, 0);
+          } else {
+            // Ligne avec texte : insère le tag au-dessus
+            lines.splice(index, 0, tag);
+            shiftOverrides(index - 1, 1);
+            scheduleAutoSave();
+            renderAllLines(index + 1, start);
+          }
+          showToast(`${tag} inséré !`);
+          return;
+        }
+      }
+
+      // ALT + A : Formater en Ad-lib (entourer de parenthèses)
+      if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === 'a' || e.key === 'A')) {
+        e.preventDefault();
+        if (start < end) {
+          const selected = val.slice(start, end);
+          const wrapped = `(${selected})`;
+          lines[index] = val.slice(0, start) + wrapped + val.slice(end);
+          scheduleAutoSave();
+          renderAllLines(index, start + wrapped.length);
+        } else {
+          const trimmed = val.trim();
+          if (!trimmed) {
+            lines[index] = '()';
+            scheduleAutoSave();
+            renderAllLines(index, 1);
+          } else if (trimmed.startsWith('(') && trimmed.endsWith(')')) {
+            lines[index] = trimmed.slice(1, -1).trim();
+            scheduleAutoSave();
+            renderAllLines(index, lines[index].length);
+          } else {
+            lines[index] = `(${trimmed})`;
+            scheduleAutoSave();
+            renderAllLines(index, lines[index].length);
+          }
+        }
+        showToast('Ad-lib formaté ( ) !');
+        return;
+      }
+
+      // TOUCHE '(' : si du texte est sélectionné, entourer automatiquement (style VS Code)
+      if (e.key === '(' && start < end && !e.altKey && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        const selected = val.slice(start, end);
+        const wrapped = `(${selected})`;
+        lines[index] = val.slice(0, start) + wrapped + val.slice(end);
+        scheduleAutoSave();
+        renderAllLines(index, start + wrapped.length);
+        return;
+      }
+
+      // ALT + X : Répétition rapide (x2) en fin de ligne
+      if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === 'x' || e.key === 'X')) {
+        e.preventDefault();
+        const trimmed = val.trim();
+        if (/\s*\(x2\)$/i.test(trimmed)) {
+          lines[index] = trimmed.replace(/\s*\(x2\)$/i, '');
+        } else {
+          lines[index] = trimmed ? `${trimmed} (x2)` : '(x2)';
+        }
+        scheduleAutoSave();
+        renderAllLines(index, lines[index].length);
+        showToast('Répétition (x2) mise à jour !');
+        return;
+      }
+
+      // ALT + D : Supprimer rapidement la ligne courante
+      if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === 'd' || e.key === 'D')) {
+        e.preventDefault();
+        if (lines.length > 1) {
+          lines.splice(index, 1);
+          if (currentSong && currentSong.overrides) {
+            const newOverrides = {};
+            for (const [k, v] of Object.entries(currentSong.overrides)) {
+              const ki = parseInt(k, 10);
+              if (ki < index) newOverrides[ki] = v;
+              else if (ki > index) newOverrides[ki - 1] = v;
+            }
+            currentSong.overrides = newOverrides;
+          }
+          scheduleAutoSave();
+          const targetIndex = Math.min(index, lines.length - 1);
+          renderAllLines(targetIndex, (lines[targetIndex] || '').length);
+          showToast('Ligne supprimée !');
+        } else {
+          lines[0] = '';
+          if (currentSong) currentSong.overrides = {};
+          scheduleAutoSave();
+          renderAllLines(0, 0);
+        }
+        return;
+      }
+
+      // ALT + FLÈCHE HAUT : monter la ligne
+      if (e.altKey && !e.ctrlKey && !e.metaKey && e.key === 'ArrowUp') {
+        if (index > 0) {
+          e.preventDefault();
+          const temp = lines[index];
+          lines[index] = lines[index - 1];
+          lines[index - 1] = temp;
+
+          if (currentSong && currentSong.overrides) {
+            const oCur = currentSong.overrides[index];
+            const oPrev = currentSong.overrides[index - 1];
+            delete currentSong.overrides[index];
+            delete currentSong.overrides[index - 1];
+            if (oCur !== undefined) currentSong.overrides[index - 1] = oCur;
+            if (oPrev !== undefined) currentSong.overrides[index] = oPrev;
+          }
+
+          scheduleAutoSave();
+          renderAllLines(index - 1, start);
+        }
+        return;
+      }
+
+      // ALT + FLÈCHE BAS : descendre la ligne
+      if (e.altKey && !e.ctrlKey && !e.metaKey && e.key === 'ArrowDown') {
+        if (index < lines.length - 1) {
+          e.preventDefault();
+          const temp = lines[index];
+          lines[index] = lines[index + 1];
+          lines[index + 1] = temp;
+
+          if (currentSong && currentSong.overrides) {
+            const oCur = currentSong.overrides[index];
+            const oNext = currentSong.overrides[index + 1];
+            delete currentSong.overrides[index];
+            delete currentSong.overrides[index + 1];
+            if (oCur !== undefined) currentSong.overrides[index + 1] = oCur;
+            if (oNext !== undefined) currentSong.overrides[index] = oNext;
+          }
+
+          scheduleAutoSave();
+          renderAllLines(index + 1, start);
+        }
+        return;
+      }
+
       // TOUCHE ENTRÉE : couper la ligne et créer une nouvelle ligne en-dessous
       if (e.key === 'Enter') {
         e.preventDefault();
@@ -363,18 +560,7 @@ J'écris mes textes à la plume`;
         const right = val.slice(end);
         lines[index] = left;
         lines.splice(index + 1, 0, right);
-
-        // Décaler les overrides si présents
-        if (currentSong.overrides) {
-          const newOverrides = {};
-          for (const [k, v] of Object.entries(currentSong.overrides)) {
-            const ki = parseInt(k, 10);
-            if (ki <= index) newOverrides[ki] = v;
-            else newOverrides[ki + 1] = v;
-          }
-          currentSong.overrides = newOverrides;
-        }
-
+        shiftOverrides(index, 1);
         scheduleAutoSave();
         setActiveLine(index + 1, 0);
         return;
@@ -1314,8 +1500,38 @@ J'écris mes textes à la plume`;
           saveSongs();
           showToast('Enregistré manuellement !');
         }
+      } else if (e.key === 'Escape') {
+        // Touche Echap pour fermer les modals et dropdowns
+        if (shortcutsModal) shortcutsModal.classList.remove('open');
+        if (projectsModal) closeProjectsModal();
+        if (exportDropdown) exportDropdown.classList.remove('open');
       }
     });
+
+    // Modal Raccourcis Clavier
+    const btnOpenShortcuts = document.getElementById('btnOpenShortcuts');
+    const shortcutsModal = document.getElementById('shortcutsModal');
+    const btnCloseShortcutsModal = document.getElementById('btnCloseShortcutsModal');
+
+    if (btnOpenShortcuts && shortcutsModal) {
+      btnOpenShortcuts.addEventListener('click', () => {
+        shortcutsModal.classList.add('open');
+      });
+    }
+
+    if (btnCloseShortcutsModal && shortcutsModal) {
+      btnCloseShortcutsModal.addEventListener('click', () => {
+        shortcutsModal.classList.remove('open');
+      });
+    }
+
+    if (shortcutsModal) {
+      shortcutsModal.addEventListener('click', (e) => {
+        if (e.target === shortcutsModal) {
+          shortcutsModal.classList.remove('open');
+        }
+      });
+    }
 
     // Toggle Légende Code Couleur (déplié de base)
     const legendBarWrapper = document.getElementById('legendBarWrapper');

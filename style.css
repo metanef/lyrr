@@ -676,6 +676,15 @@ body {
   box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
 }
 
+.syllable-badge.tag-badge {
+  background: rgba(250, 204, 21, 0.15);
+  color: #facc15;
+  border: 1px solid rgba(250, 204, 21, 0.35);
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  cursor: default;
+}
+
 /* Main Line Area */
 .line-main {
   flex: 1;
@@ -817,6 +826,12 @@ body {
   background: rgba(255, 255, 255, 0.03);
 }
 
+.line-input.section-tag-input {
+  color: #facc15;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
 .line-input::placeholder {
   color: rgba(148, 163, 184, 0.4);
   font-style: italic;
@@ -875,6 +890,69 @@ body {
   max-width: 500px;
   padding: 24px;
   box-shadow: var(--shadow-card);
+}
+
+.modal-box-wide {
+  max-width: 580px;
+}
+
+.shortcuts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.shortcut-group-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #facc15;
+  letter-spacing: 0.6px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.shortcut-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: rgba(22, 30, 51, 0.6);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.shortcut-desc {
+  color: var(--text-muted);
+}
+
+.shortcut-keys {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.kbd {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: #fff;
+}
+
+@media (max-width: 600px) {
+  .shortcuts-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .modal-header {

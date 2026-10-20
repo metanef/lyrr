@@ -66,6 +66,20 @@
 
     <!-- Actions Dropdown -->
     <div class="header-tools">
+      <button id="btnOpenShortcuts" class="btn-action" title="Voir la liste des raccourcis clavier rapides">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
+          <line x1="6" y1="8" x2="6" y2="8"></line>
+          <line x1="10" y1="8" x2="10" y2="8"></line>
+          <line x1="14" y1="8" x2="14" y2="8"></line>
+          <line x1="18" y1="8" x2="18" y2="8"></line>
+          <line x1="6" y1="12" x2="6" y2="12"></line>
+          <line x1="18" y1="12" x2="18" y2="12"></line>
+          <line x1="7" y1="16" x2="17" y2="16"></line>
+        </svg>
+        <span>Raccourcis</span>
+      </button>
+
       <div class="dropdown" id="exportDropdown">
         <button id="btnExportMenu" class="btn-action primary">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -464,6 +478,97 @@
           </svg>
           <span>Nouveau texte</span>
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Raccourcis Clavier -->
+  <div id="shortcutsModal" class="modal-overlay">
+    <div class="modal-box modal-box-wide">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
+            <line x1="6" y1="8" x2="6" y2="8"></line>
+            <line x1="10" y1="8" x2="10" y2="8"></line>
+            <line x1="14" y1="8" x2="14" y2="8"></line>
+            <line x1="18" y1="8" x2="18" y2="8"></line>
+            <line x1="6" y1="12" x2="6" y2="12"></line>
+            <line x1="18" y1="12" x2="18" y2="12"></line>
+            <line x1="7" y1="16" x2="17" y2="16"></line>
+          </svg>
+          <h3 style="margin: 0; font-size: 16px;">Raccourcis Clavier Rapides</h3>
+        </div>
+        <button id="btnCloseShortcutsModal" class="btn-icon-sm" title="Fermer">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="shortcuts-grid">
+        <!-- Colonne 1 : Tags de Structure -->
+        <div class="shortcuts-group">
+          <div class="shortcut-group-title">Tags de Structure</div>
+          <div class="shortcut-item">
+            <span class="shortcut-desc">[Couplet 1, 2...]</span>
+            <span class="shortcut-keys"><span class="kbd">Alt</span> + <span class="kbd">1</span></span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-desc">[Refrain]</span>
+            <span class="shortcut-keys"><span class="kbd">Alt</span> + <span class="kbd">2</span></span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-desc">[Pré]</span>
+            <span class="shortcut-keys"><span class="kbd">Alt</span> + <span class="kbd">3</span></span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-desc">[Pont]</span>
+            <span class="shortcut-keys"><span class="kbd">Alt</span> + <span class="kbd">4</span></span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-desc">[Intro]</span>
+            <span class="shortcut-keys"><span class="kbd">Alt</span> + <span class="kbd">5</span></span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-desc">[Outro]</span>
+            <span class="shortcut-keys"><span class="kbd">Alt</span> + <span class="kbd">6</span></span>
+          </div>
+        </div>
+
+        <!-- Colonne 2 : Édition & Flow -->
+        <div class="shortcuts-group">
+          <div class="shortcut-group-title">Édition Rapide & Flow</div>
+          <div class="shortcut-item">
+            <span class="shortcut-desc">Ad-lib (entoure de parenthèses)</span>
+            <span class="shortcut-keys"><span class="kbd">Alt</span> + <span class="kbd">A</span></span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-desc">Auto-encadrer la sélection</span>
+            <span class="shortcut-keys"><span class="kbd">(</span></span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-desc">Répétition (x2) en fin de ligne</span>
+            <span class="shortcut-keys"><span class="kbd">Alt</span> + <span class="kbd">X</span></span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-desc">Supprimer la ligne courante</span>
+            <span class="shortcut-keys"><span class="kbd">Alt</span> + <span class="kbd">D</span></span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-desc">Déplacer la ligne vers le haut/bas</span>
+            <span class="shortcut-keys"><span class="kbd">Alt</span> + <span class="kbd">↑ / ↓</span></span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-desc">Sauvegarde manuelle immédiate</span>
+            <span class="shortcut-keys"><span class="kbd">Ctrl</span> + <span class="kbd">S</span></span>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size: 11px; color: var(--text-dim); text-align: center; border-top: 1px solid var(--border-subtle); padding-top: 10px;">
+        💡 <em>Astuce : taper Alt+1 sur une ligne vide insère le tag et crée automatiquement la ligne suivante prête à écrire.</em>
       </div>
     </div>
   </div>

@@ -87,11 +87,23 @@ Aucune installation, aucun serveur ni dépendance :
 - [x] **Ajustement manuel** : clic sur le badge d'un vers pour forcer un nombre de pieds particulier
 - [x] **Sauvegarde locale automatique** (`localStorage`) pour ne jamais perdre ses sessions
 - [x] **Gestionnaire multi-projets** : créer, basculer et gérer plusieurs textes
-- [x] **Options d'export rapide** : texte brut, texte avec mesures `[4]`, téléchargement `.txt`
+- [x] **Raccourcis clavier rapides & flow d'écriture** :
+  - `Alt + 1` : `[Couplet 1, 2...]` (auto-incrémentation)
+  - `Alt + 2` : `[Refrain]`
+  - `Alt + 3` : `[Pré]` (pré-refrain / pré-couplet)
+  - `Alt + 4` : `[Pont]`
+  - `Alt + 5` : `[Intro]`
+  - `Alt + 6` : `[Outro]`
+  - `Alt + A` : Formater la ligne ou la sélection en Ad-lib `( ... )`
+  - `(` : Auto-encadrement de la sélection
+  - `Alt + X` : Répétition `(x2)` en fin de vers
+  - `Alt + D` : Supprimer la ligne active
+  - `Alt + ↑ / ↓` : Déplacer la ligne active
+  - `Ctrl + S` : Sauvegarde manuelle immédiate
+- [x] **Correction orthographique ciblée** pour le français avec protection intégrale du slang US, de l'argot et des néologismes
 - [x] **100% autonome et local** : s'exécute d'un double-clic sur `index.html`, sans serveur ni dépendance
 
 ### 🚀 Prochaines étapes (v2.0)
 
 - [ ] **Dictionnaire de rimes & assonances local** : suggestion de rimes par proximité phonétique sans connexion internet
 - [ ] **Surlignage visuel des rimes** : code couleur sur les fins de vers qui riment ensemble
-- [ ] **Raccourcis clavier rapides** : pour insérer les tags de structure (`Ctrl+1` Couplet, `Ctrl+2` Refrain, etc.)
