@@ -1136,6 +1136,50 @@ J'écris mes textes à la plume`;
     const savedTab = localStorage.getItem(STORAGE_KEY_ACTIVE_TAB) || 'studio';
     switchTab(savedTab);
 
+    // Toggle Guide d'écriture Genius (déplié de base)
+    const geniusGuideWrapper = document.getElementById('geniusGuideWrapper');
+    const geniusGuideHeader = document.getElementById('geniusGuideHeader');
+    const btnGeniusLoadExample = document.getElementById('btnGeniusLoadExample');
+
+    if (geniusGuideHeader && geniusGuideWrapper) {
+      geniusGuideHeader.addEventListener('click', (e) => {
+        if (e.target.closest('#btnGeniusLoadExample')) return;
+        geniusGuideWrapper.classList.toggle('collapsed');
+      });
+    }
+
+    if (btnGeniusLoadExample) {
+      btnGeniusLoadExample.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const exampleSong = `intro:
+yo, tout le monde est là,
+on est dans la zone (skrrt)
+
+couplet 1 - booba
+j'arrive dans le game, sans faire de bruit
+les rues sont sombres, la nuit nous suit
+qui est là ? personne ne répond...
+tout est écrit, tout est dit (ouh, ouh)
+
+refrain (x2)
+on trace notre chemin jusqu'au sommet
+jamais on n'oubliera d'où l'on vient
+
+couplet 2 feat ninho
+le temps passe vite mais j'garde le cap
+chaque seconde compte sur la map
+mon équipe avance pas à pas x2
+
+Refrain`;
+
+        geniusInputLyrics.value = exampleSong;
+        const len = exampleSong.length;
+        geniusCharCount.textContent = `${len} caractère${len > 1 ? 's' : ''}`;
+        if (btnGeniusFormat) btnGeniusFormat.disabled = false;
+        showToast('Exemple type chargé dans les paroles brutes !');
+      });
+    }
+
     // Genius Optimizer Handlers
     geniusInputLyrics.addEventListener('input', () => {
       const len = geniusInputLyrics.value.length;

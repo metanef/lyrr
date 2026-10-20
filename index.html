@@ -209,7 +209,7 @@
           </div>
           <div>
             <h2 class="genius-title">Genius Optimizer</h2>
-            <p class="genius-subtitle">Optimisation instantanée selon le guide de style officiel Genius.com</p>
+            <p class="genius-subtitle">Optimisation des lyrics pour Genius.com</p>
           </div>
         </div>
 
@@ -237,6 +237,127 @@
             </svg>
             <span id="formatBtnText">Formater les paroles</span>
           </button>
+        </div>
+      </div>
+
+      <!-- Bandeau Guide d'écriture Genius (dépliable, déplié de base) -->
+      <div id="geniusGuideWrapper" class="genius-guide-wrapper">
+        <div class="genius-guide-header" id="geniusGuideHeader">
+          <div class="genius-guide-header-left">
+            <svg class="genius-guide-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            <span>Guide d'écriture : ce que tu tapes ➔ comment il le formate</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button id="btnGeniusLoadExample" class="btn-action small" title="Charger un exemple type pour voir les règles en action">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+              <span>Exemple type</span>
+            </button>
+            <button id="geniusGuideToggleBtn" class="genius-guide-toggle-btn" title="Replier / Déplier le guide">
+              <svg class="chevron-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="genius-guide-content" id="geniusGuideContent">
+          <div class="syntax-grid">
+            
+            <!-- Carte 1 : Sections & Artistes -->
+            <div class="syntax-card">
+              <div class="syntax-card-title">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+                <strong>Sections & Artistes</strong>
+              </div>
+              <div class="syntax-rows">
+                <div class="syntax-row">
+                  <code>intro:</code> ou <code>intro</code> <span class="syntax-arrow">➔</span> <span class="syntax-tag">[Intro]</span>
+                </div>
+                <div class="syntax-row">
+                  <code>couplet 1 - booba</code> <span class="syntax-arrow">➔</span> <span class="syntax-tag">[Couplet 1 : Booba]</span>
+                </div>
+                <div class="syntax-row">
+                  <code>verse 2 feat ninho</code> <span class="syntax-arrow">➔</span> <span class="syntax-tag">[Couplet 2 : Ninho]</span>
+                </div>
+                <div class="syntax-row">
+                  <code>refrain</code>, <code>pont</code>, <code>outro</code> <span class="syntax-arrow">➔</span> <span class="syntax-tag">[Refrain]</span>, <span class="syntax-tag">[Pont]</span>, <span class="syntax-tag">[Outro]</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Carte 2 : Répétitions & Refrains -->
+            <div class="syntax-card">
+              <div class="syntax-card-title">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+                <strong>Répétitions & Refrains</strong>
+              </div>
+              <div class="syntax-rows">
+                <div class="syntax-row">
+                  <code>refrain (x2)</code> <span class="syntax-arrow">➔</span> <span class="syntax-desc">Duplique tout le refrain</span>
+                </div>
+                <div class="syntax-row">
+                  <code>Refrain</code> (seul sans vers) <span class="syntax-arrow">➔</span> <span class="syntax-desc">Réinjecte le refrain précédent</span>
+                </div>
+                <div class="syntax-row">
+                  <code>ma phrase x2</code> ou <code>(bis)</code> <span class="syntax-arrow">➔</span> <span class="syntax-desc">Duplique le vers 2 fois</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Carte 3 : Ad-libs & Chœurs -->
+            <div class="syntax-card">
+              <div class="syntax-card-title">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+                <strong>Ad-libs & Chœurs</strong>
+              </div>
+              <div class="syntax-rows">
+                <div class="syntax-row">
+                  <code>[skrrt]</code> ou <code>*yeah*</code> <span class="syntax-arrow">➔</span> <span class="syntax-tag">(Skrrt)</span>, <span class="syntax-tag">(Yeah)</span>
+                </div>
+                <div class="syntax-row">
+                  <code>(ouh, ouh)</code> <span class="syntax-arrow">➔</span> <span class="syntax-tag">(Ouh, ouh)</span>
+                </div>
+                <div class="syntax-row">
+                  <span class="syntax-desc">Toujours en parenthèses, majuscule auto</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Carte 4 : Ponctuation & Casse -->
+            <div class="syntax-card">
+              <div class="syntax-card-title">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+                <strong>Ponctuation & Casse</strong>
+              </div>
+              <div class="syntax-rows">
+                <div class="syntax-row">
+                  <code>dans la rue,</code> <span class="syntax-arrow">➔</span> <span class="syntax-tag">Dans la rue</span> <span class="syntax-desc">(virgule ôtée)</span>
+                </div>
+                <div class="syntax-row">
+                  <code>qui est là ?</code> <span class="syntax-arrow">➔</span> <span class="syntax-desc">Garde <code>?</code>, <code>!</code>, <code>...</code></span>
+                </div>
+                <div class="syntax-row">
+                  <span class="syntax-desc">Majuscule automatique à chaque vers</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
         </div>
       </div>
 
@@ -305,56 +426,6 @@
         </div>
 
       </div>
-
-      <!-- Guidelines Reminder Footer -->
-      <footer class="genius-guidelines">
-        <h3 class="guidelines-title">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="16" x2="12" y2="12"></line>
-            <line x1="12" y1="8" x2="12.01" y2="8"></line>
-          </svg>
-          Standards Officiels Genius Appliqués Automatiquement
-        </h3>
-        <div class="guidelines-grid">
-          <div class="guideline-card">
-            <div class="guideline-header">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <polyline points="9 18 15 12 9 6"></polyline>
-              </svg>
-              <strong>Headers [Crochets]</strong>
-            </div>
-            <p>Normalisation automatique : <code>[Couplet 1 : Artiste]</code>, <code>[Refrain]</code>, <code>[Intro]</code>, <code>[Outro]</code>.</p>
-          </div>
-          <div class="guideline-card">
-            <div class="guideline-header">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <polyline points="9 18 15 12 9 6"></polyline>
-              </svg>
-              <strong>Majuscule par ligne</strong>
-            </div>
-            <p>La première lettre de chaque vers et de chaque ad-lib <code>(Yeah)</code> commence obligatoirement par une majuscule.</p>
-          </div>
-          <div class="guideline-card">
-            <div class="guideline-header">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <polyline points="9 18 15 12 9 6"></polyline>
-              </svg>
-              <strong>Ponctuation épurée</strong>
-            </div>
-            <p>Retrait des virgules et points finaux superflus. Préservation stricte de <code>?</code>, <code>!</code> et <code>...</code>.</p>
-          </div>
-          <div class="guideline-card">
-            <div class="guideline-header">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <polyline points="9 18 15 12 9 6"></polyline>
-              </svg>
-              <strong>Répétitions & Refrains</strong>
-            </div>
-            <p>Multiplications <code>x2</code> et rappels de <code>Refrain</code> automatiquement étendus avec les paroles complètes.</p>
-          </div>
-        </div>
-      </footer>
 
     </div>
   </div>
