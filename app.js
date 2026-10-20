@@ -547,25 +547,33 @@ J'écris mes textes à la plume`;
       // RACCOURCIS CLAVIER RAPIDES (Tags de structure, Ad-libs, Édition)
       // ======================================================================
 
-      // ALT + 1..6 : Insertion intelligente de tags de structure
-      if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+      // ALT + Chiffres du haut du clavier (AZERTY: &, é, ", ', (, - | QWERTY: 1..6)
+      if (e.altKey && !e.ctrlKey && !e.metaKey) {
         let tag = null;
-        if (e.key === '1') {
+
+        const isKey1 = (e.code === 'Digit1' || e.key === '&' || e.key === '1') && e.code !== 'Numpad1';
+        const isKey2 = (e.code === 'Digit2' || e.key === 'é' || e.key === 'É' || e.key === '2') && e.code !== 'Numpad2';
+        const isKey3 = (e.code === 'Digit3' || e.key === '"' || e.key === '3') && e.code !== 'Numpad3';
+        const isKey4 = (e.code === 'Digit4' || e.key === '\'' || e.key === '4') && e.code !== 'Numpad4';
+        const isKey5 = (e.code === 'Digit5' || e.key === '(' || e.key === '5') && e.code !== 'Numpad5';
+        const isKey6 = (e.code === 'Digit6' || e.key === '-' || e.key === '6') && e.code !== 'Numpad6';
+
+        if (isKey1) {
           // Compter les couplets existants pour auto-incrémentation [Couplet 1], [Couplet 2]...
           let coupletCount = 0;
           for (let c = 0; c < lines.length; c++) {
             if (/^\[Couplet(?:\s+(\d+))?/i.test(lines[c].trim())) coupletCount++;
           }
           tag = coupletCount > 0 ? `[Couplet ${coupletCount + 1}]` : '[Couplet 1]';
-        } else if (e.key === '2') {
+        } else if (isKey2) {
           tag = '[Refrain]';
-        } else if (e.key === '3') {
+        } else if (isKey3) {
           tag = '[Pré]';
-        } else if (e.key === '4') {
+        } else if (isKey4) {
           tag = '[Pont]';
-        } else if (e.key === '5') {
+        } else if (isKey5) {
           tag = '[Intro]';
-        } else if (e.key === '6') {
+        } else if (isKey6) {
           tag = '[Outro]';
         }
 
