@@ -72,6 +72,8 @@
   const btnCloseApiKeyModal = document.getElementById('btnCloseApiKeyModal');
   const inputGeminiApiKey = document.getElementById('inputGeminiApiKey');
   const btnToggleApiKeyVisibility = document.getElementById('btnToggleApiKeyVisibility');
+  const btnTestApiKey = document.getElementById('btnTestApiKey');
+  const apiKeyTestFeedback = document.getElementById('apiKeyTestFeedback');
   const btnRemoveApiKey = document.getElementById('btnRemoveApiKey');
   const btnCancelApiKey = document.getElementById('btnCancelApiKey');
   const btnSaveApiKey = document.getElementById('btnSaveApiKey');
@@ -769,6 +771,64 @@ IMPORTANT: Ne renvoie QUE les paroles formitées, sans texte d'introduction ni d
     }
   }
 
+  async function fetchAvailableModels(apiKey) {
+    const versions = ['v1beta', 'v1'];
+    for (const ver of versions) {
+      try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/${ver}/models?key=${encodeURIComponent(apiKey)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.models) && data.models.length > 0) {
+            const compatible = data.models.filter(m => 
+              Array.isArray(m.supportedGenerationMethods) && 
+              m.supportedGenerationMethods.includes('generateContent')
+            );
+            if (compatible.length > 0) {
+              return { version: ver, models: compatible.map(m => m.name.replace(/^models\//, '')) };
+            }
+          }
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          if (res.status === 400 || res.status === 403) {
+            const msg = errData.error?.message || `Clé API refusée (${res.status})`;
+            throw new Error(`Erreur Clé API Google : ${msg}`);
+          }
+        }
+      } catch (e) {
+        if (e.message && e.message.includes('Clé API')) throw e;
+      }
+    }
+    return null;
+  }
+
+  function selectBestModel(modelList) {
+    if (!Array.isArray(modelList) || modelList.length === 0) {
+      return 'gemini-2.0-flash';
+    }
+
+    // 1. Chercher un modèle 2.5 Flash
+    const m25 = modelList.find(m => (m.includes('2.5') || m.includes('2-5')) && m.includes('flash'));
+    if (m25) return m25;
+
+    // 2. Chercher un modèle 2.0 Flash (ex: gemini-2.0-flash, gemini-2.0-flash-exp)
+    const m20 = modelList.find(m => (m.includes('2.0') || m.includes('2-0')) && m.includes('flash'));
+    if (m20) return m20;
+
+    // 3. Chercher un modèle 1.5 Flash (ex: gemini-1.5-flash-latest, gemini-1.5-flash-002, gemini-1.5-flash)
+    const m15 = modelList.find(m => (m.includes('1.5') || m.includes('1-5')) && m.includes('flash'));
+    if (m15) return m15;
+
+    // 4. Tout modèle Flash
+    const anyFlash = modelList.find(m => m.includes('flash'));
+    if (anyFlash) return anyFlash;
+
+    // 5. Tout modèle Pro
+    const anyPro = modelList.find(m => m.includes('pro'));
+    if (anyPro) return anyPro;
+
+    return modelList[0];
+  }
+
   async function formatLyricsWithGemini(rawLyrics) {
     const apiKey = (localStorage.getItem(STORAGE_KEY_GEMINI_KEY) || '').trim();
     if (!apiKey) {
@@ -776,53 +836,112 @@ IMPORTANT: Ne renvoie QUE les paroles formitées, sans texte d'introduction ni d
       throw new Error('Veuillez configurer votre clé API Google Gemini pour lancer le formatage IA (ou utilisez les Règles Locales).');
     }
 
-    const delays = [1000, 2000, 4000, 8000, 16000];
-    const maxRetries = 5;
-    let retryCount = 0;
+    // Découverte automatique des modèles actifs pour la clé
+    let targetVersion = 'v1beta';
+    let targetModel = 'gemini-2.0-flash';
+    let availableModels = [];
 
-    const modelsToTry = [
+    try {
+      const discovery = await fetchAvailableModels(apiKey);
+      if (discovery && discovery.models && discovery.models.length > 0) {
+        targetVersion = discovery.version;
+        availableModels = discovery.models;
+        targetModel = selectBestModel(availableModels);
+        console.log(`[Genius IA] Modèles disponibles:`, availableModels);
+        console.log(`[Genius IA] Modèle sélectionné: ${targetModel} (${targetVersion})`);
+      }
+    } catch (discoveryErr) {
+      if (discoveryErr.message && discoveryErr.message.includes('Clé API')) {
+        throw discoveryErr;
+      }
+      console.warn("Détection automatique ListModels ignorée, essai des fallbacks:", discoveryErr);
+    }
+
+    const fallbackList = [
+      targetModel,
       'gemini-2.5-flash-preview-09-2025',
       'gemini-2.0-flash',
-      'gemini-1.5-flash'
+      'gemini-2.0-flash-exp',
+      'gemini-1.5-flash-latest',
+      'gemini-1.5-flash-002',
+      'gemini-1.5-flash',
+      'gemini-1.5-pro'
     ];
+    const candidateModels = availableModels.length > 0 
+      ? [targetModel, ...availableModels.filter(m => m !== targetModel)]
+      : [...new Set(fallbackList)];
 
-    async function callApi(modelIdx = 0) {
-      const modelName = modelsToTry[modelIdx] || 'gemini-1.5-flash';
+    const delays = [1000, 2000, 4000, 8000];
+    const maxRetries = 4;
+    let retryCount = 0;
+
+    async function callApi(modelIdx = 0, useSystemInstruction = true) {
+      const currentModel = candidateModels[modelIdx] || 'gemini-2.0-flash';
+      const cleanModelName = currentModel.replace(/^models\//, '');
+      const endpointUrl = `https://generativelanguage.googleapis.com/${targetVersion}/models/${cleanModelName}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+      let requestBody;
+      if (useSystemInstruction) {
+        requestBody = {
+          contents: [{ parts: [{ text: rawLyrics }] }],
+          systemInstruction: { parts: [{ text: GENIUS_SYSTEM_PROMPT }] }
+        };
+      } else {
+        requestBody = {
+          contents: [{
+            parts: [{
+              text: `${GENIUS_SYSTEM_PROMPT}\n\n--- PAROLES BRUTES À FORMATER STRICTEMENT SELON LES RÈGLES GENIUS ---\n${rawLyrics}`
+            }]
+          }]
+        };
+      }
+
       try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+        const response = await fetch(endpointUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: rawLyrics }] }],
-            systemInstruction: { parts: [{ text: GENIUS_SYSTEM_PROMPT }] }
-          })
+          body: JSON.stringify(requestBody)
         });
 
         if (!response.ok) {
           const errData = await response.json().catch(() => ({}));
           const errMsg = errData.error?.message || `Erreur HTTP ${response.status}`;
-          if ((response.status === 404 || errMsg.toLowerCase().includes('not found')) && modelIdx < modelsToTry.length - 1) {
-            console.warn(`Modèle ${modelName} indisponible, essai avec ${modelsToTry[modelIdx + 1]}...`);
-            return callApi(modelIdx + 1);
+
+          // Si l'erreur provient de systemInstruction non supporté
+          if (useSystemInstruction && (errMsg.includes('systemInstruction') || errMsg.includes('system_instruction'))) {
+            return callApi(modelIdx, false);
           }
+
+          // Si le modèle est introuvable (404), passer au modèle suivant
+          if ((response.status === 404 || errMsg.toLowerCase().includes('not found')) && modelIdx < candidateModels.length - 1) {
+            console.warn(`Modèle ${cleanModelName} indisponible (404), tentative avec ${candidateModels[modelIdx + 1]}...`);
+            return callApi(modelIdx + 1, useSystemInstruction);
+          }
+
+          // Si v1beta échoue sur 404 et qu'on n'a pas encore tenté v1
+          if (response.status === 404 && targetVersion === 'v1beta') {
+            targetVersion = 'v1';
+            return callApi(0, useSystemInstruction);
+          }
+
           throw new Error(errMsg);
         }
 
         const data = await response.json();
         const formatted = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
         if (!formatted) throw new Error("Réponse vide renvoyée par le modèle.");
-        return formatted.trim();
+        return { formatted: formatted.trim(), modelUsed: cleanModelName };
       } catch (err) {
-        if (retryCount < maxRetries) {
-          await new Promise(res => setTimeout(res, delays[retryCount]));
+        if (retryCount < maxRetries && !err.message.includes('API key') && !err.message.includes('not found')) {
+          await new Promise(res => setTimeout(res, delays[retryCount] || 2000));
           retryCount++;
-          return callApi(modelIdx);
+          return callApi(modelIdx, useSystemInstruction);
         }
         throw err;
       }
     }
 
-    return await callApi(0);
+    return await callApi(0, true);
   }
 
   function formatLyricsLocal(raw) {
@@ -900,17 +1019,6 @@ IMPORTANT: Ne renvoie QUE les paroles formitées, sans texte d'introduction ni d
       tabBtnGenius.classList.add('active');
       tabPaneStudio.classList.remove('active');
       tabPaneGenius.classList.add('active');
-
-      // Écriture automatique des paroles du Studio dans l'optimiseur Genius
-      const studioText = (lines || []).join('\n');
-      if (studioText.trim()) {
-        geniusInputLyrics.value = studioText;
-        const len = studioText.length;
-        geniusCharCount.textContent = `${len} caractère${len > 1 ? 's' : ''}`;
-        if (btnGeniusFormatAi) {
-          btnGeniusFormatAi.disabled = false;
-        }
-      }
     } else {
       tabBtnGenius.classList.remove('active');
       tabBtnStudio.classList.add('active');
@@ -1112,16 +1220,16 @@ IMPORTANT: Ne renvoie QUE les paroles formitées, sans texte d'introduction ni d
       setGeniusState('output', formatted);
     });
 
-    // Formatage IA (Gemini 2.5 Flash)
+    // Formatage IA (Gemini avec détection dynamique de modèle)
     btnGeniusFormatAi.addEventListener('click', async () => {
       const raw = geniusInputLyrics.value.trim();
       if (!raw) return;
 
       setGeniusState('loading');
       try {
-        const formatted = await formatLyricsWithGemini(raw);
-        setGeniusState('output', formatted);
-        showToast('Paroles formatées avec succès par Gemini !');
+        const result = await formatLyricsWithGemini(raw);
+        setGeniusState('output', result.formatted);
+        showToast(`Formaté avec succès par Gemini (${result.modelUsed}) !`);
       } catch (err) {
         console.error('Erreur Genius AI Formatter:', err);
         setGeniusState('error', '', err.message || "Une erreur est survenue lors du formattage.");
@@ -1162,9 +1270,46 @@ IMPORTANT: Ne renvoie QUE les paroles formitées, sans texte d'introduction ni d
     btnRemoveApiKey.addEventListener('click', () => {
       localStorage.removeItem(STORAGE_KEY_GEMINI_KEY);
       inputGeminiApiKey.value = '';
+      if (apiKeyTestFeedback) apiKeyTestFeedback.style.display = 'none';
       updateApiKeyStatus();
       closeApiKeyModal();
       showToast('Clé API supprimée.');
+    });
+
+    // Test de la clé API
+    btnTestApiKey.addEventListener('click', async () => {
+      const keyVal = inputGeminiApiKey.value.trim();
+      if (!keyVal) {
+        apiKeyTestFeedback.style.display = 'block';
+        apiKeyTestFeedback.style.background = 'rgba(244, 63, 94, 0.15)';
+        apiKeyTestFeedback.style.color = '#fda4af';
+        apiKeyTestFeedback.textContent = 'Veuillez d\'abord saisir une clé API.';
+        return;
+      }
+
+      apiKeyTestFeedback.style.display = 'block';
+      apiKeyTestFeedback.style.background = 'rgba(255, 255, 255, 0.06)';
+      apiKeyTestFeedback.style.color = 'var(--text-muted)';
+      apiKeyTestFeedback.textContent = 'Interrogation de Google AI Studio...';
+
+      try {
+        const discovery = await fetchAvailableModels(keyVal);
+        if (discovery && discovery.models && discovery.models.length > 0) {
+          const count = discovery.models.length;
+          const sample = discovery.models.slice(0, 3).join(', ');
+          apiKeyTestFeedback.style.background = 'rgba(16, 185, 129, 0.15)';
+          apiKeyTestFeedback.style.color = '#6ee7b7';
+          apiKeyTestFeedback.innerHTML = `<strong>✅ Clé valide !</strong> ${count} modèle(s) détecté(s) sur ${discovery.version} : <code>${sample}</code>...`;
+        } else {
+          apiKeyTestFeedback.style.background = 'rgba(245, 158, 11, 0.15)';
+          apiKeyTestFeedback.style.color = '#fcd34d';
+          apiKeyTestFeedback.textContent = 'Clé acceptée, mais aucun modèle generateContent détecté. Vérifiez vos quotas Google AI Studio.';
+        }
+      } catch (err) {
+        apiKeyTestFeedback.style.background = 'rgba(244, 63, 94, 0.15)';
+        apiKeyTestFeedback.style.color = '#fda4af';
+        apiKeyTestFeedback.innerHTML = `<strong>❌ Erreur :</strong> ${err.message || 'Impossible de joindre Google AI Studio.'}`;
+      }
     });
 
     initEditorEvents();

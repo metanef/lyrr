@@ -479,12 +479,15 @@
           </svg>
           <span>Clé 100% gratuite sur <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" style="color: #facc15; text-decoration: underline;">Google AI Studio</a>.</span>
         </div>
+
+        <div id="apiKeyTestFeedback" style="display: none; font-size: 12px; border-radius: var(--radius-sm); padding: 8px 12px; line-height: 1.4;"></div>
       </div>
 
       <div style="display: flex; gap: 10px; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid var(--border-subtle);">
         <button id="btnRemoveApiKey" class="btn-action" style="color: var(--accent-rose);">Supprimer la clé</button>
         <div style="display: flex; gap: 8px;">
-          <button id="btnCancelApiKey" class="btn-action">Annuler</button>
+          <button id="btnTestApiKey" class="btn-action" type="button">Tester la clé</button>
+          <button id="btnCancelApiKey" class="btn-action">Fermer</button>
           <button id="btnSaveApiKey" class="btn-action primary">Enregistrer</button>
         </div>
       </div>
