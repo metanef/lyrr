@@ -81,6 +81,7 @@
   let currentSong = null;
   let lines = [];
   let activeLineIndex = null;
+  let editingBadgeIndex = null;
   let saveTimeout = null;
 
   const DEFAULT_LYRICS = 
@@ -246,7 +247,6 @@ J'écris mes textes à la plume`;
         breakdownHtml = `
           <div class="line-breakdown">
             <div class="breakdown-chips">${chipsHtml}</div>
-            <div class="active-line-total">${count} ${count > 1 ? 'pieds' : 'pied'}</div>
           </div>
         `;
       }
@@ -258,9 +258,23 @@ J'écris mes textes à la plume`;
       let badgeHtml = '';
       if (isTag) {
         badgeHtml = `<span class="syllable-badge tag-badge" title="Tag de structure">TAG</span>`;
-      } else {
+      } else if (editingBadgeIndex === i) {
         badgeHtml = `
-          <span class="syllable-badge ${meterClass}" data-line="${i}" title="${count > 0 ? `${count} pieds (clic pour ajuster)` : ''}">
+          <input type="text" 
+                 class="badge-edit-input" 
+                 data-line="${i}" 
+                 value="${count > 0 ? count : ''}" 
+                 maxlength="3" 
+                 autocomplete="off" 
+                 spellcheck="false" 
+                 title="Entrée pour valider, Échap pour annuler">
+        `;
+      } else {
+        const badgeTitle = count > 0 
+          ? `${count} pieds (clic pour modifier)` 
+          : 'Clic pour fixer les pieds';
+        badgeHtml = `
+          <span class="syllable-badge ${meterClass}" data-line="${i}" title="${badgeTitle}">
             ${count > 0 ? count : ''}
           </span>
         `;
@@ -287,8 +301,14 @@ J'écris mes textes à la plume`;
     const avg = totalLinesCount > 0 ? (totalSyllablesCount / totalLinesCount).toFixed(1) : '0';
     statAvgCount.textContent = avg;
 
-    // Restaurer le focus si spécifié
-    if (focusIndex !== null) {
+    // Restaurer le focus (priorité à l'input d'édition directe du badge si actif)
+    if (editingBadgeIndex !== null) {
+      const badgeInput = editorLinesContainer.querySelector(`.badge-edit-input[data-line="${editingBadgeIndex}"]`);
+      if (badgeInput) {
+        badgeInput.focus();
+        badgeInput.select();
+      }
+    } else if (focusIndex !== null) {
       const targetInput = editorLinesContainer.querySelector(`.line-input[data-index="${focusIndex}"]`);
       if (targetInput) {
         targetInput.focus();
@@ -307,27 +327,40 @@ J'écris mes textes à la plume`;
     renderAllLines(index, forceCaretPos);
   }
 
-  // --- Ajustement manuel au clic sur le badge de la marge ---
-  function handleBadgeClick(lineIndex) {
-    const currentLine = lines[lineIndex] || '';
-    if (!currentLine.trim()) return;
+  // --- Validation et enregistrement de l'ajustement direct du badge ---
+  function commitBadgeEdit(lineIndex, rawVal) {
+    if (editingBadgeIndex === null && rawVal === undefined) return;
+    editingBadgeIndex = null;
 
-    const naturalCount = LyrrSyllables.countLineSyllables(currentLine, MODE).total;
-    const currentOverride = (currentSong.overrides && currentSong.overrides[lineIndex] !== undefined)
-      ? currentSong.overrides[lineIndex]
-      : naturalCount;
+    const trimmed = (rawVal !== undefined && rawVal !== null ? String(rawVal) : '').trim();
 
-    const userInput = prompt(`Ajuster le nombre de pieds pour la ligne ${lineIndex + 1} :\n"${currentLine}"\n(Calcul automatique : ${naturalCount} pieds)`, currentOverride);
-    if (userInput !== null) {
-      const val = parseInt(userInput.trim(), 10);
+    if (trimmed === '') {
+      // Si le champ est vidé : on supprime l'override pour rétablir le calcul automatique
+      if (currentSong && currentSong.overrides && currentSong.overrides[lineIndex] !== undefined) {
+        delete currentSong.overrides[lineIndex];
+        scheduleAutoSave();
+        showToast(`Ligne ${lineIndex + 1} : calcul automatique rétabli`);
+      }
+    } else {
+      const val = parseInt(trimmed, 10);
       if (!isNaN(val) && val >= 0) {
         if (!currentSong.overrides) currentSong.overrides = {};
         currentSong.overrides[lineIndex] = val;
         scheduleAutoSave();
-        renderAllLines(lineIndex);
         showToast(`Ligne ${lineIndex + 1} fixée à ${val} pieds`);
       }
     }
+
+    const currentLineLen = (lines[lineIndex] || '').length;
+    renderAllLines(lineIndex, currentLineLen);
+  }
+
+  function cancelBadgeEdit() {
+    if (editingBadgeIndex === null) return;
+    const prevLine = editingBadgeIndex;
+    editingBadgeIndex = null;
+    const currentLineLen = (lines[prevLine] || '').length;
+    renderAllLines(prevLine, currentLineLen);
   }
 
   // --- Écouteurs d'événements de l'éditeur ---
@@ -370,6 +403,47 @@ J'écris mes textes à la plume`;
 
     // Navigation clavier et raccourcis rapides
     editorLinesContainer.addEventListener('keydown', (e) => {
+      // Cas 1 : Interaction directe sur l'input de réglage du badge
+      const badgeInput = e.target.closest('.badge-edit-input');
+      if (badgeInput) {
+        const lineIndex = parseInt(badgeInput.dataset.line, 10);
+
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          commitBadgeEdit(lineIndex, badgeInput.value);
+          return;
+        }
+
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          cancelBadgeEdit();
+          return;
+        }
+
+        if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          const currentVal = parseInt(badgeInput.value || '0', 10);
+          badgeInput.value = currentVal + 1;
+          badgeInput.select();
+          return;
+        }
+
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          const currentVal = parseInt(badgeInput.value || '0', 10);
+          badgeInput.value = Math.max(0, currentVal - 1);
+          badgeInput.select();
+          return;
+        }
+
+        // Autoriser uniquement les chiffres 0-9 et les touches de contrôle courantes
+        if (!/^[0-9]$/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+          e.preventDefault();
+        }
+        return;
+      }
+
+      // Cas 2 : Interaction sur un input de ligne ordinaire
       const input = e.target.closest('.line-input');
       if (!input) return;
 
@@ -668,21 +742,47 @@ J'écris mes textes à la plume`;
       setActiveLine(lastPastedIndex, targetCaret);
     });
 
-    // Clic sur le badge de la marge pour ajuster
+    // Validation automatique lors du blur (clic ailleurs) de l'input d'édition du badge
+    editorLinesContainer.addEventListener('focusout', (e) => {
+      const badgeInput = e.target.closest('.badge-edit-input');
+      if (badgeInput && editingBadgeIndex !== null) {
+        const lineIndex = parseInt(badgeInput.dataset.line, 10);
+        commitBadgeEdit(lineIndex, badgeInput.value);
+      }
+    });
+
+    // Clic sur le badge de la marge pour le rendre éditable directement
     editorLinesContainer.addEventListener('click', (e) => {
       const badge = e.target.closest('.syllable-badge');
-      if (badge && badge.dataset.line !== undefined) {
-        handleBadgeClick(parseInt(badge.dataset.line, 10));
+      if (badge && badge.dataset.line !== undefined && !badge.classList.contains('tag-badge')) {
+        const lineIdx = parseInt(badge.dataset.line, 10);
+        if (editingBadgeIndex !== null && editingBadgeIndex !== lineIdx) {
+          const prevInput = editorLinesContainer.querySelector('.badge-edit-input');
+          if (prevInput) {
+            commitBadgeEdit(editingBadgeIndex, prevInput.value);
+          }
+        }
+        editingBadgeIndex = lineIdx;
+        activeLineIndex = lineIdx;
+        renderAllLines();
       }
     });
 
     // Clic pour fermer la ligne de pieds si on clique à droite de l'éditeur ou dans une zone vide
     editorLinesContainer.addEventListener('mousedown', (e) => {
-      // 1. Clic sur un badge dans la marge : ne pas fermer (l'événement click gère l'ajustement)
-      if (e.target.closest('.syllable-badge')) return;
+      // 1. Clic sur un badge dans la marge ou sur l'input d'édition : ne pas fermer
+      if (e.target.closest('.syllable-badge') || e.target.closest('.badge-edit-input')) return;
 
       // 2. Clic sur la ligne de décomposition : garder ouvert
       if (e.target.closest('.line-breakdown')) return;
+
+      // Si un badge était en cours d'édition et qu'on clique ailleurs
+      if (editingBadgeIndex !== null) {
+        const badgeInput = editorLinesContainer.querySelector('.badge-edit-input');
+        if (badgeInput) {
+          commitBadgeEdit(editingBadgeIndex, badgeInput.value);
+        }
+      }
 
       // 3. Clic sur un input de texte
       const input = e.target.closest('.line-input');
@@ -709,9 +809,15 @@ J'écris mes textes à la plume`;
       }
     });
 
-    // Clic en-dehors de l'éditeur : referme la ligne de décomposition
+    // Clic en-dehors de l'éditeur : valide l'édition en cours et referme la décomposition
     document.addEventListener('mousedown', (e) => {
       if (!editorLinesContainer.contains(e.target)) {
+        if (editingBadgeIndex !== null) {
+          const badgeInput = editorLinesContainer.querySelector('.badge-edit-input');
+          if (badgeInput) {
+            commitBadgeEdit(editingBadgeIndex, badgeInput.value);
+          }
+        }
         if (activeLineIndex !== null) {
           activeLineIndex = null;
           renderAllLines();

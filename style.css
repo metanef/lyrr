@@ -640,6 +640,48 @@ body {
   transform: scale(1.1);
 }
 
+/* Badge de pieds sur la ligne active : même surbrillance violet/indigo vibrante */
+.line-row.active .syllable-badge:not(.empty):not(.tag-badge) {
+  background: linear-gradient(135deg, var(--accent-indigo), var(--accent-purple)) !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  border: none !important;
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.5) !important;
+  transform: scale(1.08);
+}
+
+/* Input d'ajustement direct des pieds dans la marge */
+.badge-edit-input {
+  width: 28px;
+  height: 22px;
+  background: #111827;
+  color: #ffffff;
+  border: 1.5px solid var(--accent-indigo);
+  border-radius: 4px;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 800;
+  outline: none;
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.55);
+  padding: 0;
+  margin: 0;
+  cursor: text;
+  caret-color: #ffffff;
+  transition: all var(--transition-fast);
+}
+
+.badge-edit-input:focus {
+  border-color: #818cf8;
+  box-shadow: 0 0 14px rgba(129, 140, 248, 0.75);
+}
+
+.badge-edit-input::-webkit-outer-spin-button,
+.badge-edit-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 .syllable-badge.empty {
   opacity: 0;
   pointer-events: none;
@@ -783,21 +825,6 @@ body {
   padding: 0 4px;
   border-radius: 3px;
   font-size: 10px;
-}
-
-.active-line-total {
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 700;
-  font-size: 11px;
-  color: #fff;
-  background: linear-gradient(135deg, var(--accent-indigo), var(--accent-purple));
-  padding: 2px 7px;
-  border-radius: 4px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  white-space: nowrap;
-  flex-shrink: 0;
 }
 
 /* Line Text Input */
