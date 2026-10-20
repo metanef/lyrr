@@ -52,12 +52,16 @@ Aucune installation, aucun serveur ni dépendance :
    - **Projets** : bouton en haut pour créer et basculer entre plusieurs chansons.
    - **Export** : copier le texte brut, copier avec les mesures `[4]`, ou télécharger un fichier `.txt`.
 
-8. **Onglet Genius Lyrics Optimizer (IA Gemini + Règles Locales) :**
+8. **Onglet Genius Lyrics Optimizer (100% Local & Instantané) :**
    - Bascule immédiate entre **Studio Lyrics** et **Genius Optimizer** depuis la barre de navigation supérieure.
-   - **Moteur IA Gemini 2.5 Flash :** utilise le persona d'Éditeur Senior Genius pour restructurer et formater des textes bruts selon le guide de contribution officiel Genius.
-   - **Moteur Local Rapide (Hors-ligne / Sans clé) :** nettoie instantanément la casse, les en-têtes `[Couplet 1]`, `[Refrain]`, la ponctuation de fin de ligne et étend les répétitions `x2`.
-   - **Synchronisation bidirectionnelle :** bouton "Importer du Studio" pour charger vos lyrics en un clic, et bouton "Envoyer au Studio" pour réinjecter le texte propre dans l'éditeur de pieds.
-   - **Gestion de clé API Google :** stockée 100% en local dans votre navigateur.
+   - **Moteur Senior Local Dédié :** nettoyage et mise en page instantanés sans aucune clé API, sans serveur et sans quota :
+     - **Normalisation des en-têtes de sections :** `[Intro]`, `[Couplet 1 : Artiste]`, `[Refrain]`, `[Pré-refrain]`, `[Pont]`, `[Outro]`, `[Solo]`, `[Break]`, `[Interlude]`.
+     - **Expansion automatique des refrains :** tout rappel isolé type `Refrain`, `(Refrain)` ou `Repeat Chorus` duplique automatiquement les paroles complètes du refrain de la chanson.
+     - **Multiplicateurs étendus :** `[Refrain x2]` et répétitions de lignes `(x2)`, `x2`, `(bis)` automatiquement dupliqués.
+     - **Ponctuation épurée :** suppression des virgules et points finaux superflus, préservation stricte de `?`, `!` et `...`.
+     - **Ad-libs & Majuscules :** transformation des crochets `[skrrt]` et étoiles en parenthèses `(Skrrt)` avec majuscules systématiques sur chaque début de ligne et ad-lib.
+     - **Bilan d'optimisation interactif :** affichage immédiat des statistiques des corrections effectuées (sections, majuscules, ponctuations, répétitions).
+   - **Synchronisation bidirectionnelle :** bouton "Importer du Studio" pour charger vos lyrics en un clic, et bouton "Renvoyer au Studio" pour réinjecter le texte formaté dans l'éditeur de pieds.
 
 ---
 
@@ -78,7 +82,7 @@ Aucune installation, aucun serveur ni dépendance :
 - [x] **Gestion des nombres en chiffres** : conversion phonétique instantanée (`14` = 2, `100` = 1, `2026` = 4...)
 - [x] **Décomposition sur la ligne active** : affichage intercalé entre les vers avec sous-découpe (`·`)
 - [x] **Code couleur épuré & légende dépliable** sous le header (sans mentions textuelles encombrantes)
-- [x] **Onglet Genius Lyrics Optimizer intégré** (IA Gemini 2.5 Flash + moteur de règles locales hors-ligne)
+- [x] **Onglet Genius Lyrics Optimizer 100% Local & Instantané** (moteur Senior complet, sans clé API ni quota, avec bilan interactif)
 - [x] **Synchronisation bidirectionnelle Studio ↔ Genius**
 - [x] **Ajustement manuel** : clic sur le badge d'un vers pour forcer un nombre de pieds particulier
 - [x] **Sauvegarde locale automatique** (`localStorage`) pour ne jamais perdre ses sessions

@@ -44,12 +44,9 @@
 
   // Genius Optimizer Selectors
   const btnGeniusImportStudio = document.getElementById('btnGeniusImportStudio');
-  const btnGeniusApiKey = document.getElementById('btnGeniusApiKey');
-  const apiKeyStatusText = document.getElementById('apiKeyStatusText');
   const btnGeniusClear = document.getElementById('btnGeniusClear');
-  const btnGeniusFormatLocal = document.getElementById('btnGeniusFormatLocal');
-  const btnGeniusFormatAi = document.getElementById('btnGeniusFormatAi');
-  const formatAiBtnText = document.getElementById('formatAiBtnText');
+  const btnGeniusFormat = document.getElementById('btnGeniusFormat');
+  const formatBtnText = document.getElementById('formatBtnText');
 
   const geniusInputLyrics = document.getElementById('geniusInputLyrics');
   const geniusCharCount = document.getElementById('geniusCharCount');
@@ -60,23 +57,9 @@
   const geniusCopyText = document.getElementById('geniusCopyText');
 
   const geniusOutputCard = document.getElementById('geniusOutputCard');
+  const geniusStatsSummary = document.getElementById('geniusStatsSummary');
   const geniusStateEmpty = document.getElementById('geniusStateEmpty');
-  const geniusStateLoading = document.getElementById('geniusStateLoading');
   const geniusOutputLyrics = document.getElementById('geniusOutputLyrics');
-  const geniusErrorBox = document.getElementById('geniusErrorBox');
-  const geniusErrorMessage = document.getElementById('geniusErrorMessage');
-  const btnGeniusFallbackLocal = document.getElementById('btnGeniusFallbackLocal');
-
-  // API Key Modal Selectors
-  const apiKeyModal = document.getElementById('apiKeyModal');
-  const btnCloseApiKeyModal = document.getElementById('btnCloseApiKeyModal');
-  const inputGeminiApiKey = document.getElementById('inputGeminiApiKey');
-  const btnToggleApiKeyVisibility = document.getElementById('btnToggleApiKeyVisibility');
-  const btnTestApiKey = document.getElementById('btnTestApiKey');
-  const apiKeyTestFeedback = document.getElementById('apiKeyTestFeedback');
-  const btnRemoveApiKey = document.getElementById('btnRemoveApiKey');
-  const btnCancelApiKey = document.getElementById('btnCancelApiKey');
-  const btnSaveApiKey = document.getElementById('btnSaveApiKey');
 
   // --- État de l'application ---
   const STORAGE_KEY = 'lyrr_studio_songs_v3';
@@ -686,73 +669,319 @@ J'écris mes textes à la plume`;
     switchSong(currentSong.id);
   }
 
-  // --- Genius Lyrics Optimizer Logic ---
-  const GENIUS_SYSTEM_PROMPT = `
-Persona: Tu es un Éditeur Senior chez Genius.com, expert en transcription et en mise en page de paroles de chansons. Ta mission est de nettoyer et de formater des textes bruts pour qu'ils respectent scrupuleusement le guide de style officiel de la plateforme Genius.
+  // --- Genius Lyrics Optimizer Logic (100% Local & Instant) ---
+  const GENIUS_SECTION_MAP = [
+    { match: /^(intro|introduction)/i, label: 'Intro', isRefrain: false },
+    { match: /^(outro|conclusion|fin)/i, label: 'Outro', isRefrain: false },
+    { match: /^(pr[ée]-?refrain|pre-?chorus|pr[ée]-?hook|prerefrain|prechorus)/i, label: 'Pré-refrain', isRefrain: false },
+    { match: /^(post-?refrain|post-?chorus|post-?hook|postrefrain|postchorus)/i, label: 'Post-refrain', isRefrain: false },
+    { match: /^(refrain|chorus|hook)/i, label: 'Refrain', isRefrain: true },
+    { match: /^(pont|bridge|transition)/i, label: 'Pont', isRefrain: false },
+    { match: /^(couplet|verse|strophe|partie)/i, label: 'Couplet', isRefrain: false },
+    { match: /^(interlude|skit)/i, label: 'Interlude', isRefrain: false },
+    { match: /^(break|breakdown|drop)/i, label: 'Break', isRefrain: false },
+    { match: /^(solo(?:\s+(?:guitare|piano|sax))?)/i, label: 'Solo', isRefrain: false }
+  ];
 
-Task: Convertir les paroles brutes fournies par l'utilisateur en un texte parfaitement formaté selon les standards de contribution Genius.
-
-Constraints:
-- Titres de sections : Doivent être entre crochets, ex: [Couplet 1], [Refrain], [Outro]. 
-- Casing : La première lettre de chaque ligne doit être une majuscule. Les titres de sections doivent avoir une majuscule au début (ex: [Chorus] et non [CHORUS]).
-- Ponctuation : Supprime les virgules en fin de ligne. Garde uniquement la ponctuation interne nécessaire à la compréhension. Pas de points finaux en fin de phrase sauf exception rare.
-- Structure : Une seule ligne d'espace entre les sections. Pas d'espaces doubles entre les lignes d'un même couplet.
-- Nettoyage : Supprime les mentions inutiles comme "Repeat x2". À la place, copie-colle la section répétée.
-
-Step-by-Step Instructions:
-1. Analyse : Identifie les différentes parties de la chanson (Intro, Couplets, Refrains, Pont, Outro).
-2. Normalisation des headers : Traduis ou reformate les indicateurs de section en utilisant le format standard [Nom de la section].
-3. Correction de la casse : Applique la majuscule systématique en début de ligne.
-4. Épuration : Retire la ponctuation superflue en fin de ligne (virgules, points).
-5. Vérification : Assure-toi que le texte est fluide et professionnel.
-
-IMPORTANT: Ne renvoie QUE les paroles formitées, sans texte d'introduction ni de conclusion.
-  `.trim();
-
-  function openApiKeyModal() {
-    if (!apiKeyModal) return;
-    const currentKey = localStorage.getItem(STORAGE_KEY_GEMINI_KEY) || '';
-    if (inputGeminiApiKey) inputGeminiApiKey.value = currentKey;
-    apiKeyModal.classList.add('open');
-    if (inputGeminiApiKey) inputGeminiApiKey.focus();
+  function toTitleCase(str) {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
   }
 
-  function closeApiKeyModal() {
-    if (apiKeyModal) apiKeyModal.classList.remove('open');
+  function formatArtistName(artistStr) {
+    if (!artistStr) return '';
+    return artistStr.trim().split(/\s+/).map(w => {
+      // Préserver les acronymes courts d'artistes (SCH, PLK, RK, NTM, 13...)
+      if (w.toUpperCase() === w && w.length <= 4) return w;
+      return toTitleCase(w);
+    }).join(' ');
   }
 
-  function updateApiKeyStatus() {
-    const key = (localStorage.getItem(STORAGE_KEY_GEMINI_KEY) || '').trim();
-    if (apiKeyStatusText) {
-      apiKeyStatusText.textContent = key ? 'Clé API ✓' : 'Clé API';
+  function identifyGeniusHeader(lineStr) {
+    let text = lineStr.trim();
+    if (!text) return null;
+
+    // Retirer décorations
+    text = text.replace(/^[-=~*#_]+\s*/, '').replace(/\s*[-=~*#_]+$/, '').trim();
+    // Retirer numérotation de début (ex: "1. Intro", "2) Couplet")
+    text = text.replace(/^\d+[\.\)\-]\s+/, '').trim();
+
+    const hasEnclosing = (/^\[.*\]$/.test(text)) || (/^\(.*\)$/.test(text));
+    let content = text.replace(/^[\[\(]\s*/, '').replace(/\s*[\]\)]$/, '').trim();
+
+    let mult = 1;
+    const multRegex = /\s*\(?(?:x\s*(\d+)|repeat\s*x?\s*(\d+)|\*(\d+)|bis)\)?\.?$/i;
+    const multMatch = content.match(multRegex);
+    if (multMatch) {
+      mult = parseInt(multMatch[1] || multMatch[2] || multMatch[3] || '2', 10);
+      content = content.replace(multRegex, '').trim();
     }
-    if (btnGeniusApiKey) {
-      if (key) {
-        btnGeniusApiKey.style.borderColor = 'rgba(250, 204, 21, 0.4)';
-        btnGeniusApiKey.style.color = '#facc15';
-      } else {
-        btnGeniusApiKey.style.borderColor = '';
-        btnGeniusApiKey.style.color = '';
+
+    let secPart = content;
+    let artistPart = '';
+
+    const artistSplitRegex = /^(.*?)(?:\s*(?:[:\-|–—]|feat\.?|ft\.?)\s*|\s+\()([^\)]+)\)?$/i;
+    const splitMatch = content.match(artistSplitRegex);
+    if (splitMatch && splitMatch[1] && splitMatch[2]) {
+      const p1 = splitMatch[1].trim();
+      const p2 = splitMatch[2].trim().replace(/\)$/, '');
+      const isKnown = GENIUS_SECTION_MAP.some(s => s.match.test(p1));
+      if (isKnown) {
+        secPart = p1;
+        artistPart = p2;
       }
     }
+
+    let matchedDef = null;
+    for (const sec of GENIUS_SECTION_MAP) {
+      if (sec.match.test(secPart)) {
+        matchedDef = sec;
+        break;
+      }
+    }
+
+    if (!matchedDef) {
+      if (hasEnclosing && content.length <= 45 && !/[.!?]/.test(content)) {
+        const cleanCustom = content.charAt(0).toUpperCase() + content.slice(1);
+        return {
+          formatted: `[${cleanCustom}]`,
+          multiplier: mult,
+          isRefrain: /refrain|chorus|hook/i.test(cleanCustom)
+        };
+      }
+      return null;
+    }
+
+    const numMatch = secPart.match(/\b(\d+)\b/);
+    let finalLabel = matchedDef.label;
+    if (numMatch && (matchedDef.label === 'Couplet' || matchedDef.label === 'Partie')) {
+      finalLabel += ` ${numMatch[1]}`;
+    }
+
+    if (artistPart) {
+      finalLabel += ` : ${formatArtistName(artistPart)}`;
+    }
+
+    return {
+      formatted: `[${finalLabel}]`,
+      multiplier: mult,
+      isRefrain: matchedDef.isRefrain
+    };
   }
 
-  function setGeniusState(state, outputText = '', errorText = '') {
-    if (geniusStateEmpty) geniusStateEmpty.style.display = state === 'empty' ? 'flex' : 'none';
-    if (geniusStateLoading) geniusStateLoading.style.display = state === 'loading' ? 'flex' : 'none';
-    if (geniusOutputLyrics) {
-      geniusOutputLyrics.style.display = state === 'output' ? 'block' : 'none';
-      if (state === 'output') geniusOutputLyrics.textContent = outputText;
+  function cleanLyricLine(lineStr, stats) {
+    let line = lineStr.trim();
+    if (!line) return { line: '', repeatCount: 1 };
+
+    // Normaliser quotes & apostrophes
+    line = line.replace(/[’‘`´]/g, "'").replace(/[“”«»]/g, '"');
+    // Retirer timestamps : [01:23.45], (02:14)
+    line = line.replace(/^\[?\d{1,2}:\d{2}(?:\.\d+)?\]?\s*/, '');
+    // Retirer numérotation de ligne : "1. ", "12) "
+    line = line.replace(/^\d+[\.\)\-]\s+/, '');
+
+    // Répétitions en fin de ligne : (x2), x2, (bis), etc.
+    let repeatCount = 1;
+    const repRegex = /\s*\(?(?:x\s*(\d+)|repeat\s*x?\s*(\d+)|\*(\d+)|bis)\)?\.?$/i;
+    const repMatch = line.match(repRegex);
+    if (repMatch) {
+      repeatCount = parseInt(repMatch[1] || repMatch[2] || repMatch[3] || '2', 10);
+      line = line.replace(repRegex, '').trim();
+      stats.repetitionsExpanded++;
     }
-    if (geniusErrorBox) {
-      geniusErrorBox.style.display = state === 'error' ? 'flex' : 'none';
-      if (state === 'error' && geniusErrorMessage) {
-        geniusErrorMessage.textContent = errorText || "Une erreur est survenue lors du formattage. Veuillez réessayer.";
+
+    // Ponctuation de fin de ligne : retirer virgules, points finaux, deux-points, points-virgules
+    // Conserver '?', '!', et '...'
+    const prevLen = line.length;
+    line = line.replace(/\.\.\./g, '___ELLIPSIS___');
+    line = line.replace(/[,;.:]+$/, '').trim();
+    line = line.replace(/___ELLIPSIS___/g, '...');
+    if (line.length !== prevLen) {
+      stats.punctuationCleaned++;
+    }
+
+    // Formater les ad-libs écrits avec des crochets ou étoiles : [skrrt] -> (Skrrt), *ouh* -> (Ouh)
+    line = line.replace(/\[([a-zA-Z\s!?,']+?)\]/g, (m, p) => {
+      if (p.length < 25 && !GENIUS_SECTION_MAP.some(s => s.match.test(p))) {
+        stats.adlibsCleaned++;
+        return `(${toTitleCase(p.trim())})`;
+      }
+      return m;
+    });
+
+    line = line.replace(/\*([a-zA-Z\s!?,']+?)\*/g, (m, p) => {
+      stats.adlibsCleaned++;
+      return `(${toTitleCase(p.trim())})`;
+    });
+
+    // Mettre une majuscule au premier mot des ad-libs entre parenthèses : (yeah, yeah) -> (Yeah, yeah)
+    line = line.replace(/\(([^)]+)\)/g, (m, inner) => {
+      const trimmed = inner.trim();
+      if (!trimmed) return m;
+      const capitalizedInner = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+      return `(${capitalizedInner})`;
+    });
+
+    // Majuscule du mot suivant un ad-lib au début de la ligne : (Skrrt) j'accélère -> (Skrrt) J'accélère
+    line = line.replace(/^(\([^\)]+\)\s+)([a-zà-öø-ÿ])/i, (m, prefix, char) => {
+      stats.linesCapitalized++;
+      return prefix + char.toUpperCase();
+    });
+
+    // Majuscule obligatoire en début de ligne
+    if (line.length > 0) {
+      if (line.startsWith('(')) {
+        if (line.length > 1 && line.charAt(1) >= 'a' && line.charAt(1) <= 'z') {
+          line = '(' + line.charAt(1).toUpperCase() + line.slice(2);
+          stats.linesCapitalized++;
+        }
+      } else {
+        const first = line.charAt(0);
+        if (first >= 'a' && first <= 'z') {
+          line = first.toUpperCase() + line.slice(1);
+          stats.linesCapitalized++;
+        }
+      }
+    }
+
+    // Nettoyer les espaces multiples internes
+    line = line.replace(/[ \t]{2,}/g, ' ');
+
+    return { line, repeatCount };
+  }
+
+  function formatLyricsGeniusLocal(raw) {
+    if (!raw || !raw.trim()) {
+      return {
+        text: '',
+        stats: {
+          headersFormatted: 0,
+          linesCapitalized: 0,
+          punctuationCleaned: 0,
+          repetitionsExpanded: 0,
+          adlibsCleaned: 0
+        }
+      };
+    }
+
+    let stats = {
+      headersFormatted: 0,
+      linesCapitalized: 0,
+      punctuationCleaned: 0,
+      repetitionsExpanded: 0,
+      adlibsCleaned: 0
+    };
+
+    const linesRaw = raw.split(/\r?\n/);
+    const rawSections = [];
+    let curSection = {
+      header: null,
+      lines: [],
+      multiplier: 1,
+      isRefrain: false
+    };
+
+    let primaryRefrainLines = [];
+
+    for (let i = 0; i < linesRaw.length; i++) {
+      const trimmed = linesRaw[i].trim();
+      if (!trimmed) continue;
+
+      // Métadonnées à supprimer
+      if (/^(paroles|lyrics|compositeur|auteur|produced by|written by|source)[\s:]/i.test(trimmed)) {
+        continue;
+      }
+
+      // Est-ce un en-tête de section ?
+      const headerInfo = identifyGeniusHeader(trimmed);
+      if (headerInfo) {
+        stats.headersFormatted++;
+        if (curSection.header || curSection.lines.length > 0) {
+          rawSections.push(curSection);
+        }
+        curSection = {
+          header: headerInfo.formatted,
+          lines: [],
+          multiplier: headerInfo.multiplier || 1,
+          isRefrain: headerInfo.isRefrain
+        };
+        continue;
+      }
+
+      // Est-ce un rappel de refrain sans paroles ? Ex: "(Refrain)", "Repeat Chorus", "[Refrain]"
+      if (/^\(?\s*(?:repeat\s+)?(?:refrain|chorus|hook)\s*(?:x\s*\d+)?\s*\)?$/i.test(trimmed)) {
+        if (primaryRefrainLines.length > 0) {
+          curSection.lines.push(...primaryRefrainLines);
+          stats.repetitionsExpanded++;
+          continue;
+        }
+      }
+
+      // Ligne de parole individuelle
+      const { line: cleanLine, repeatCount } = cleanLyricLine(trimmed, stats);
+      if (cleanLine) {
+        for (let r = 0; r < repeatCount; r++) {
+          curSection.lines.push(cleanLine);
+        }
+      }
+    }
+
+    if (curSection.header || curSection.lines.length > 0) {
+      rawSections.push(curSection);
+    }
+
+    // Référence du premier refrain non-vide
+    for (const s of rawSections) {
+      if (s.isRefrain && s.lines.length > 0) {
+        primaryRefrainLines = [...s.lines];
+        break;
+      }
+    }
+
+    // Injection automatique si un refrain ultérieur a été déclaré sans paroles
+    for (const s of rawSections) {
+      if (s.isRefrain && s.lines.length === 0 && primaryRefrainLines.length > 0) {
+        s.lines = [...primaryRefrainLines];
+        stats.repetitionsExpanded++;
+      }
+    }
+
+    // Assemblage final : 1 saut de ligne entre sections, 0 saut interne
+    const finalBlocks = [];
+    for (const s of rawSections) {
+      const blockLines = [];
+      if (s.header) {
+        blockLines.push(s.header);
+      }
+      const count = Math.max(1, s.multiplier || 1);
+      for (let m = 0; m < count; m++) {
+        blockLines.push(...s.lines);
+      }
+      if (blockLines.length > 0) {
+        finalBlocks.push(blockLines.join('\n'));
+      }
+    }
+
+    return {
+      text: finalBlocks.join('\n\n').trim(),
+      stats
+    };
+  }
+
+  function setGeniusState(state, outputText = '', stats = null) {
+    if (geniusStateEmpty) {
+      geniusStateEmpty.style.display = (state === 'empty') ? 'flex' : 'none';
+    }
+
+    if (geniusOutputLyrics) {
+      geniusOutputLyrics.style.display = (state === 'output') ? 'block' : 'none';
+      if (state === 'output') {
+        geniusOutputLyrics.textContent = outputText;
       }
     }
 
     if (geniusOutputTools) {
-      geniusOutputTools.style.display = state === 'output' ? 'flex' : 'none';
+      geniusOutputTools.style.display = (state === 'output') ? 'flex' : 'none';
     }
 
     if (geniusOutputCard) {
@@ -763,254 +992,37 @@ IMPORTANT: Ne renvoie QUE les paroles formitées, sans texte d'introduction ni d
       }
     }
 
-    if (btnGeniusFormatAi) {
-      btnGeniusFormatAi.disabled = (state === 'loading') || !geniusInputLyrics.value.trim();
-    }
-    if (formatAiBtnText) {
-      formatAiBtnText.textContent = state === 'loading' ? 'Traitement...' : 'Formater les paroles';
-    }
-  }
-
-  async function fetchAvailableModels(apiKey) {
-    const versions = ['v1beta', 'v1'];
-    for (const ver of versions) {
-      try {
-        const res = await fetch(`https://generativelanguage.googleapis.com/${ver}/models?key=${encodeURIComponent(apiKey)}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data.models) && data.models.length > 0) {
-            const compatible = data.models.filter(m => 
-              Array.isArray(m.supportedGenerationMethods) && 
-              m.supportedGenerationMethods.includes('generateContent')
-            );
-            if (compatible.length > 0) {
-              return { version: ver, models: compatible.map(m => m.name.replace(/^models\//, '')) };
-            }
-          }
-        } else {
-          const errData = await res.json().catch(() => ({}));
-          if (res.status === 400 || res.status === 403) {
-            const msg = errData.error?.message || `Clé API refusée (${res.status})`;
-            throw new Error(`Erreur Clé API Google : ${msg}`);
-          }
+    if (geniusStatsSummary) {
+      if (state === 'output' && stats) {
+        let summaryHtml = `
+          <div class="genius-stat-badge success">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            <span>Conforme Genius</span>
+          </div>
+        `;
+        if (stats.headersFormatted > 0) {
+          summaryHtml += `<div class="genius-stat-badge highlight"><span>${stats.headersFormatted} section${stats.headersFormatted > 1 ? 's' : ''} [ ]</span></div>`;
         }
-      } catch (e) {
-        if (e.message && e.message.includes('Clé API')) throw e;
-      }
-    }
-    return null;
-  }
-
-  function selectBestModel(modelList) {
-    if (!Array.isArray(modelList) || modelList.length === 0) {
-      return 'gemini-2.0-flash';
-    }
-
-    // 1. Chercher un modèle 2.5 Flash
-    const m25 = modelList.find(m => (m.includes('2.5') || m.includes('2-5')) && m.includes('flash'));
-    if (m25) return m25;
-
-    // 2. Chercher un modèle 2.0 Flash (ex: gemini-2.0-flash, gemini-2.0-flash-exp)
-    const m20 = modelList.find(m => (m.includes('2.0') || m.includes('2-0')) && m.includes('flash'));
-    if (m20) return m20;
-
-    // 3. Chercher un modèle 1.5 Flash (ex: gemini-1.5-flash-latest, gemini-1.5-flash-002, gemini-1.5-flash)
-    const m15 = modelList.find(m => (m.includes('1.5') || m.includes('1-5')) && m.includes('flash'));
-    if (m15) return m15;
-
-    // 4. Tout modèle Flash
-    const anyFlash = modelList.find(m => m.includes('flash'));
-    if (anyFlash) return anyFlash;
-
-    // 5. Tout modèle Pro
-    const anyPro = modelList.find(m => m.includes('pro'));
-    if (anyPro) return anyPro;
-
-    return modelList[0];
-  }
-
-  async function formatLyricsWithGemini(rawLyrics) {
-    const apiKey = (localStorage.getItem(STORAGE_KEY_GEMINI_KEY) || '').trim();
-    if (!apiKey) {
-      openApiKeyModal();
-      throw new Error('Veuillez configurer votre clé API Google Gemini pour lancer le formatage IA (ou utilisez les Règles Locales).');
-    }
-
-    // Découverte automatique des modèles actifs pour la clé
-    let targetVersion = 'v1beta';
-    let targetModel = 'gemini-2.0-flash';
-    let availableModels = [];
-
-    try {
-      const discovery = await fetchAvailableModels(apiKey);
-      if (discovery && discovery.models && discovery.models.length > 0) {
-        targetVersion = discovery.version;
-        availableModels = discovery.models;
-        targetModel = selectBestModel(availableModels);
-        console.log(`[Genius IA] Modèles disponibles:`, availableModels);
-        console.log(`[Genius IA] Modèle sélectionné: ${targetModel} (${targetVersion})`);
-      }
-    } catch (discoveryErr) {
-      if (discoveryErr.message && discoveryErr.message.includes('Clé API')) {
-        throw discoveryErr;
-      }
-      console.warn("Détection automatique ListModels ignorée, essai des fallbacks:", discoveryErr);
-    }
-
-    const fallbackList = [
-      targetModel,
-      'gemini-2.5-flash-preview-09-2025',
-      'gemini-2.0-flash',
-      'gemini-2.0-flash-exp',
-      'gemini-1.5-flash-latest',
-      'gemini-1.5-flash-002',
-      'gemini-1.5-flash',
-      'gemini-1.5-pro'
-    ];
-    const candidateModels = availableModels.length > 0 
-      ? [targetModel, ...availableModels.filter(m => m !== targetModel)]
-      : [...new Set(fallbackList)];
-
-    const delays = [1000, 2000, 4000, 8000];
-    const maxRetries = 4;
-    let retryCount = 0;
-
-    async function callApi(modelIdx = 0, useSystemInstruction = true) {
-      const currentModel = candidateModels[modelIdx] || 'gemini-2.0-flash';
-      const cleanModelName = currentModel.replace(/^models\//, '');
-      const endpointUrl = `https://generativelanguage.googleapis.com/${targetVersion}/models/${cleanModelName}:generateContent?key=${encodeURIComponent(apiKey)}`;
-
-      let requestBody;
-      if (useSystemInstruction) {
-        requestBody = {
-          contents: [{ parts: [{ text: rawLyrics }] }],
-          systemInstruction: { parts: [{ text: GENIUS_SYSTEM_PROMPT }] }
-        };
+        if (stats.linesCapitalized > 0) {
+          summaryHtml += `<div class="genius-stat-badge"><span>${stats.linesCapitalized} majuscule${stats.linesCapitalized > 1 ? 's' : ''}</span></div>`;
+        }
+        if (stats.punctuationCleaned > 0) {
+          summaryHtml += `<div class="genius-stat-badge"><span>${stats.punctuationCleaned} ponctuation${stats.punctuationCleaned > 1 ? 's' : ''}</span></div>`;
+        }
+        if (stats.repetitionsExpanded > 0) {
+          summaryHtml += `<div class="genius-stat-badge highlight"><span>${stats.repetitionsExpanded} répétition${stats.repetitionsExpanded > 1 ? 's' : ''}</span></div>`;
+        }
+        if (stats.adlibsCleaned > 0) {
+          summaryHtml += `<div class="genius-stat-badge"><span>${stats.adlibsCleaned} ad-lib${stats.adlibsCleaned > 1 ? 's' : ''} ( )</span></div>`;
+        }
+        geniusStatsSummary.innerHTML = summaryHtml;
+        geniusStatsSummary.style.display = 'flex';
       } else {
-        requestBody = {
-          contents: [{
-            parts: [{
-              text: `${GENIUS_SYSTEM_PROMPT}\n\n--- PAROLES BRUTES À FORMATER STRICTEMENT SELON LES RÈGLES GENIUS ---\n${rawLyrics}`
-            }]
-          }]
-        };
-      }
-
-      try {
-        const response = await fetch(endpointUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody)
-        });
-
-        if (!response.ok) {
-          const errData = await response.json().catch(() => ({}));
-          const errMsg = errData.error?.message || `Erreur HTTP ${response.status}`;
-
-          // Si l'erreur provient de systemInstruction non supporté
-          if (useSystemInstruction && (errMsg.includes('systemInstruction') || errMsg.includes('system_instruction'))) {
-            return callApi(modelIdx, false);
-          }
-
-          // Si le modèle est introuvable (404), passer au modèle suivant
-          if ((response.status === 404 || errMsg.toLowerCase().includes('not found')) && modelIdx < candidateModels.length - 1) {
-            console.warn(`Modèle ${cleanModelName} indisponible (404), tentative avec ${candidateModels[modelIdx + 1]}...`);
-            return callApi(modelIdx + 1, useSystemInstruction);
-          }
-
-          // Si v1beta échoue sur 404 et qu'on n'a pas encore tenté v1
-          if (response.status === 404 && targetVersion === 'v1beta') {
-            targetVersion = 'v1';
-            return callApi(0, useSystemInstruction);
-          }
-
-          throw new Error(errMsg);
-        }
-
-        const data = await response.json();
-        const formatted = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        if (!formatted) throw new Error("Réponse vide renvoyée par le modèle.");
-        return { formatted: formatted.trim(), modelUsed: cleanModelName };
-      } catch (err) {
-        if (retryCount < maxRetries && !err.message.includes('API key') && !err.message.includes('not found')) {
-          await new Promise(res => setTimeout(res, delays[retryCount] || 2000));
-          retryCount++;
-          return callApi(modelIdx, useSystemInstruction);
-        }
-        throw err;
+        geniusStatsSummary.style.display = 'none';
       }
     }
-
-    return await callApi(0, true);
-  }
-
-  function formatLyricsLocal(raw) {
-    if (!raw || !raw.trim()) return '';
-
-    const linesRaw = raw.split(/\r?\n/);
-    const processedLines = [];
-
-    const HEADER_REGEX = /^(?:\[|\()? *(intro|couplet(?:\s*\d+)?|verse(?:\s*\d+)?|refrain|chorus|hook|pont|bridge|outro|pre-refrain|pr[ée]-chorus) *(?:\:|\-)? *(?:\]|\))? *$/i;
-
-    function normalizeHeader(str) {
-      const m = str.match(HEADER_REGEX);
-      if (!m) return null;
-      const name = m[1].toLowerCase().trim();
-      if (name.includes('intro')) return '[Intro]';
-      if (name.includes('outro')) return '[Outro]';
-      if (name.includes('refrain') || name.includes('chorus') || name.includes('hook')) return '[Refrain]';
-      if (name.includes('pont') || name.includes('bridge')) return '[Pont]';
-      if (name.includes('pre') || name.includes('pré')) return '[Pré-refrain]';
-      if (name.includes('couplet') || name.includes('verse')) {
-        const num = name.replace(/[^0-9]/g, '');
-        return num ? `[Couplet ${num}]` : '[Couplet]';
-      }
-      return null;
-    }
-
-    let lastWasEmpty = false;
-
-    for (let i = 0; i < linesRaw.length; i++) {
-      let line = linesRaw[i].trim();
-
-      if (!line) {
-        if (!lastWasEmpty && processedLines.length > 0) {
-          processedLines.push('');
-          lastWasEmpty = true;
-        }
-        continue;
-      }
-
-      const normHeader = normalizeHeader(line);
-      if (normHeader) {
-        if (processedLines.length > 0 && !lastWasEmpty) {
-          processedLines.push('');
-        }
-        processedLines.push(normHeader);
-        lastWasEmpty = false;
-        continue;
-      }
-
-      let repeatMatch = line.match(/\s*\(?(?:x\s*(\d+)|repeat\s*x?\s*(\d+))\)?$/i);
-      let repeatCount = 1;
-      if (repeatMatch) {
-        repeatCount = parseInt(repeatMatch[1] || repeatMatch[2] || '2', 10);
-        line = line.replace(/\s*\(?(?:x\s*(\d+)|repeat\s*x?\s*(\d+))\)?$/i, '').trim();
-      }
-
-      line = line.replace(/[,;.:]+$/, '');
-
-      if (line.length > 0) {
-        line = line.charAt(0).toUpperCase() + line.slice(1);
-      }
-
-      for (let r = 0; r < repeatCount; r++) {
-        processedLines.push(line);
-      }
-      lastWasEmpty = false;
-    }
-
-    return processedLines.join('\n');
   }
 
   function switchTab(tabId) {
@@ -1124,14 +1136,12 @@ IMPORTANT: Ne renvoie QUE les paroles formitées, sans texte d'introduction ni d
     const savedTab = localStorage.getItem(STORAGE_KEY_ACTIVE_TAB) || 'studio';
     switchTab(savedTab);
 
-    // Genius Formatter Handlers
-    updateApiKeyStatus();
-
+    // Genius Optimizer Handlers
     geniusInputLyrics.addEventListener('input', () => {
       const len = geniusInputLyrics.value.length;
       geniusCharCount.textContent = `${len} caractère${len > 1 ? 's' : ''}`;
-      if (btnGeniusFormatAi) {
-        btnGeniusFormatAi.disabled = !geniusInputLyrics.value.trim();
+      if (btnGeniusFormat) {
+        btnGeniusFormat.disabled = !geniusInputLyrics.value.trim();
       }
     });
 
@@ -1150,7 +1160,7 @@ IMPORTANT: Ne renvoie QUE les paroles formitées, sans texte d'introduction ni d
       geniusInputLyrics.value = studioText;
       const len = studioText.length;
       geniusCharCount.textContent = `${len} caractère${len > 1 ? 's' : ''}`;
-      if (btnGeniusFormatAi) btnGeniusFormatAi.disabled = false;
+      if (btnGeniusFormat) btnGeniusFormat.disabled = false;
       showToast('Paroles importées depuis le Studio !');
     });
 
@@ -1201,115 +1211,16 @@ IMPORTANT: Ne renvoie QUE les paroles formitées, sans texte d'introduction ni d
       }
     });
 
-    // Formatage Local (Règles sans IA)
-    btnGeniusFormatLocal.addEventListener('click', () => {
+    // Formatage Instantané Local (Moteur Senior Genius)
+    btnGeniusFormat.addEventListener('click', () => {
       const raw = geniusInputLyrics.value.trim();
       if (!raw) {
         showToast('Collez d\'abord vos paroles brutes.');
         return;
       }
-      const formatted = formatLyricsLocal(raw);
-      setGeniusState('output', formatted);
-      showToast('Formaté avec les règles Genius !');
-    });
-
-    btnGeniusFallbackLocal.addEventListener('click', () => {
-      const raw = geniusInputLyrics.value.trim();
-      if (!raw) return;
-      const formatted = formatLyricsLocal(raw);
-      setGeniusState('output', formatted);
-    });
-
-    // Formatage IA (Gemini avec détection dynamique de modèle)
-    btnGeniusFormatAi.addEventListener('click', async () => {
-      const raw = geniusInputLyrics.value.trim();
-      if (!raw) return;
-
-      setGeniusState('loading');
-      try {
-        const result = await formatLyricsWithGemini(raw);
-        setGeniusState('output', result.formatted);
-        showToast(`Formaté avec succès par Gemini (${result.modelUsed}) !`);
-      } catch (err) {
-        console.error('Erreur Genius AI Formatter:', err);
-        setGeniusState('error', '', err.message || "Une erreur est survenue lors du formattage.");
-      }
-    });
-
-    // Modal Clé API
-    btnGeniusApiKey.addEventListener('click', openApiKeyModal);
-    btnCloseApiKeyModal.addEventListener('click', closeApiKeyModal);
-    btnCancelApiKey.addEventListener('click', closeApiKeyModal);
-    apiKeyModal.addEventListener('click', (e) => {
-      if (e.target === apiKeyModal) closeApiKeyModal();
-    });
-
-    btnToggleApiKeyVisibility.addEventListener('click', () => {
-      if (inputGeminiApiKey.type === 'password') {
-        inputGeminiApiKey.type = 'text';
-        btnToggleApiKeyVisibility.textContent = 'Masquer';
-      } else {
-        inputGeminiApiKey.type = 'password';
-        btnToggleApiKeyVisibility.textContent = 'Afficher';
-      }
-    });
-
-    btnSaveApiKey.addEventListener('click', () => {
-      const keyVal = inputGeminiApiKey.value.trim();
-      if (keyVal) {
-        localStorage.setItem(STORAGE_KEY_GEMINI_KEY, keyVal);
-        showToast('Clé API enregistrée localement !');
-      } else {
-        localStorage.removeItem(STORAGE_KEY_GEMINI_KEY);
-        showToast('Clé API supprimée.');
-      }
-      updateApiKeyStatus();
-      closeApiKeyModal();
-    });
-
-    btnRemoveApiKey.addEventListener('click', () => {
-      localStorage.removeItem(STORAGE_KEY_GEMINI_KEY);
-      inputGeminiApiKey.value = '';
-      if (apiKeyTestFeedback) apiKeyTestFeedback.style.display = 'none';
-      updateApiKeyStatus();
-      closeApiKeyModal();
-      showToast('Clé API supprimée.');
-    });
-
-    // Test de la clé API
-    btnTestApiKey.addEventListener('click', async () => {
-      const keyVal = inputGeminiApiKey.value.trim();
-      if (!keyVal) {
-        apiKeyTestFeedback.style.display = 'block';
-        apiKeyTestFeedback.style.background = 'rgba(244, 63, 94, 0.15)';
-        apiKeyTestFeedback.style.color = '#fda4af';
-        apiKeyTestFeedback.textContent = 'Veuillez d\'abord saisir une clé API.';
-        return;
-      }
-
-      apiKeyTestFeedback.style.display = 'block';
-      apiKeyTestFeedback.style.background = 'rgba(255, 255, 255, 0.06)';
-      apiKeyTestFeedback.style.color = 'var(--text-muted)';
-      apiKeyTestFeedback.textContent = 'Interrogation de Google AI Studio...';
-
-      try {
-        const discovery = await fetchAvailableModels(keyVal);
-        if (discovery && discovery.models && discovery.models.length > 0) {
-          const count = discovery.models.length;
-          const sample = discovery.models.slice(0, 3).join(', ');
-          apiKeyTestFeedback.style.background = 'rgba(16, 185, 129, 0.15)';
-          apiKeyTestFeedback.style.color = '#6ee7b7';
-          apiKeyTestFeedback.innerHTML = `<strong>✅ Clé valide !</strong> ${count} modèle(s) détecté(s) sur ${discovery.version} : <code>${sample}</code>...`;
-        } else {
-          apiKeyTestFeedback.style.background = 'rgba(245, 158, 11, 0.15)';
-          apiKeyTestFeedback.style.color = '#fcd34d';
-          apiKeyTestFeedback.textContent = 'Clé acceptée, mais aucun modèle generateContent détecté. Vérifiez vos quotas Google AI Studio.';
-        }
-      } catch (err) {
-        apiKeyTestFeedback.style.background = 'rgba(244, 63, 94, 0.15)';
-        apiKeyTestFeedback.style.color = '#fda4af';
-        apiKeyTestFeedback.innerHTML = `<strong>❌ Erreur :</strong> ${err.message || 'Impossible de joindre Google AI Studio.'}`;
-      }
+      const result = formatLyricsGeniusLocal(raw);
+      setGeniusState('output', result.text, result.stats);
+      showToast('Paroles optimisées selon les standards Genius !');
     });
 
     initEditorEvents();
