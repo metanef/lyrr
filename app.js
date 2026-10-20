@@ -286,8 +286,8 @@ J'écris mes textes à la plume`;
             ${badgeHtml}
           </div>
           <div class="line-main">
-            ${breakdownHtml}
             <input type="text" class="line-input ${inputExtraClass}" data-index="${i}" style="width: ${inputWidth}px;" value="${escapeHtml(lineText)}" spellcheck="false" autocomplete="off" placeholder="${i === 0 ? 'Écris tes lyrics ici...' : ''}">
+            ${breakdownHtml}
           </div>
         </div>
       `;
@@ -296,10 +296,7 @@ J'écris mes textes à la plume`;
     editorLinesContainer.innerHTML = html;
 
     // Mise à jour des stats globales
-    statLineCount.textContent = totalLinesCount;
-    statSyllableCount.textContent = totalSyllablesCount;
-    const avg = totalLinesCount > 0 ? (totalSyllablesCount / totalLinesCount).toFixed(1) : '0';
-    statAvgCount.textContent = avg;
+    updateGlobalStats();
 
     // Restaurer le focus (priorité à l'input d'édition directe du badge si actif)
     if (editingBadgeIndex !== null) {
@@ -363,6 +360,30 @@ J'écris mes textes à la plume`;
     renderAllLines(prevLine, currentLineLen);
   }
 
+  // --- Calcul et mise à jour des statistiques globales ---
+  function updateGlobalStats() {
+    let totalLinesCount = 0;
+    let totalSyllablesCount = 0;
+    const overrides = (currentSong && currentSong.overrides) ? currentSong.overrides : {};
+
+    for (let i = 0; i < lines.length; i++) {
+      const lineText = lines[i];
+      if (lineText.trim().length > 0) totalLinesCount++;
+      if (/^\[.*\]$/.test(lineText.trim())) continue;
+
+      if (overrides[i] !== undefined) {
+        totalSyllablesCount += overrides[i];
+      } else if (lineText.trim().length > 0) {
+        totalSyllablesCount += LyrrSyllables.countLineSyllables(lineText, MODE).total;
+      }
+    }
+
+    statLineCount.textContent = totalLinesCount;
+    statSyllableCount.textContent = totalSyllablesCount;
+    const avg = totalLinesCount > 0 ? (totalSyllablesCount / totalLinesCount).toFixed(1) : '0';
+    statAvgCount.textContent = avg;
+  }
+
   // --- Écouteurs d'événements de l'éditeur ---
   function initEditorEvents() {
     // Focus sur un input de ligne
@@ -377,17 +398,87 @@ J'écris mes textes à la plume`;
       }
     });
 
-    // Modification du texte d'une ligne
+    // Modification du texte d'une ligne en temps réel (ultra-fluide, stable et sans tressautement)
     editorLinesContainer.addEventListener('input', (e) => {
       const input = e.target.closest('.line-input');
-      if (input) {
-        const index = parseInt(input.dataset.index, 10);
-        lines[index] = input.value;
-        scheduleAutoSave();
-        // Mettre à jour l'affichage en gardant la position du curseur
-        const caret = input.selectionStart;
-        renderAllLines(index, caret);
+      if (!input) return;
+
+      const index = parseInt(input.dataset.index, 10);
+      lines[index] = input.value;
+      scheduleAutoSave();
+
+      // Ajuster instantanément la largeur de l'input au texte saisi
+      const inputWidth = Math.max(80, Math.round(measureTextWidth(input.value)) + 24);
+      input.style.width = inputWidth + 'px';
+
+      const lineText = input.value;
+      const isTag = /^\[.*\]$/.test(lineText.trim());
+      input.classList.toggle('section-tag-input', isTag);
+
+      const syllableResult = LyrrSyllables.countLineSyllables(lineText, MODE);
+      let count = syllableResult.total;
+      if (currentSong && currentSong.overrides && currentSong.overrides[index] !== undefined) {
+        count = currentSong.overrides[index];
       }
+
+      // Mettre à jour le badge de la marge à gauche
+      const row = input.closest('.line-row');
+      if (row && editingBadgeIndex !== index) {
+        const badge = row.querySelector('.syllable-badge');
+        if (badge) {
+          if (isTag) {
+            badge.className = 'syllable-badge tag-badge';
+            badge.textContent = 'TAG';
+            badge.title = 'Tag de structure';
+          } else {
+            let meterClass = '';
+            if (count === 0) meterClass = 'empty';
+            else if (count === 8) meterClass = 'meter-8';
+            else if (count === 10) meterClass = 'meter-10';
+            else if (count === 12) meterClass = 'meter-12';
+            else if (count === 16) meterClass = 'meter-16';
+            else if (count < 6) meterClass = 'meter-short';
+
+            badge.className = `syllable-badge ${meterClass}`;
+            badge.textContent = count > 0 ? count : '';
+            badge.title = count > 0 ? `${count} pieds (clic pour modifier)` : 'Clic pour fixer les pieds';
+          }
+        }
+      }
+
+      // Mettre à jour les jetons de décomposition à droite du texte
+      if (row) {
+        const main = row.querySelector('.line-main');
+        if (main) {
+          let breakdownEl = main.querySelector('.line-breakdown');
+          if (lineText.trim().length > 0 && !isTag) {
+            let chipsHtml = '';
+            for (const w of syllableResult.words) {
+              let extraClass = '';
+              if (w.isAcronym) extraClass = 'acronym';
+              else if (w.isNumber) extraClass = 'number';
+
+              chipsHtml += `
+                <div class="word-chip ${extraClass}">
+                  <span class="chip-token">${escapeHtml(w.hyphenated || w.token)}</span>
+                  <span class="chip-count">${w.count}</span>
+                </div>
+              `;
+            }
+
+            if (!breakdownEl) {
+              breakdownEl = document.createElement('div');
+              breakdownEl.className = 'line-breakdown';
+              main.appendChild(breakdownEl);
+            }
+            breakdownEl.innerHTML = `<div class="breakdown-chips">${chipsHtml}</div>`;
+          } else if (breakdownEl) {
+            breakdownEl.remove();
+          }
+        }
+      }
+
+      updateGlobalStats();
     });
 
     function shiftOverrides(fromIndex, delta) {

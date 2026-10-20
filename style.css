@@ -593,9 +593,10 @@ body {
 
 .line-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
-  margin-bottom: 3px;
+  height: 36px;
+  margin-bottom: 2px;
   border-radius: var(--radius-sm);
   transition: background var(--transition-fast);
 }
@@ -612,7 +613,7 @@ body {
   width: 38px;
   min-width: 38px;
   height: 34px;
-  align-self: flex-end; /* S'aligne toujours en bas face à l'input quand la ligne de décomposition s'ouvre au-dessus */
+  align-self: center;
   user-select: none;
   flex-shrink: 0;
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
@@ -727,45 +728,49 @@ body {
   cursor: default;
 }
 
-/* Main Line Area */
+/* Main Line Area (Input texte + jetons de pieds sur la même ligne horizontale) */
 .line-main {
   flex: 1;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
   min-width: 0;
   cursor: default;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.line-main::-webkit-scrollbar {
+  display: none;
 }
 
 /* ==========================================================================
-   Line Breakdown: La ligne insérée entre les deux vers
+   Line Breakdown: Jetons de pieds positionnés à droite du texte (stable, 0 sursaut)
    ========================================================================== */
 .line-breakdown {
   display: inline-flex;
   align-items: center;
-  justify-content: flex-start;
-  gap: 8px;
+  gap: 6px;
   height: 26px;
-  margin-bottom: 2px;
+  margin: 0;
   padding: 0;
   background: transparent;
   border: none;
   box-shadow: none;
-  animation: slideDownRow 0.14s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: fadeInChips 0.12s cubic-bezier(0.16, 1, 0.3, 1);
   overflow-x: auto;
-  align-self: flex-start;
-  max-width: 100%;
+  flex-shrink: 0;
 }
 
-@keyframes slideDownRow {
+@keyframes fadeInChips {
   from {
     opacity: 0;
-    transform: translateY(-4px);
-    max-height: 0;
+    transform: translateX(6px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
-    max-height: 32px;
+    transform: translateX(0);
   }
 }
 
