@@ -104,9 +104,4 @@ Aucune installation, aucun serveur ni dépendance :
 
 ### 🚀 Prochaines étapes (v2.0)
 
-- [ ] **Dictionnaire de rimes & assonances local** : recherche phonétique hors-ligne (rimes riches, suffisantes, assonances)
-- [ ] **Surlignage visuel des rimes** : identification des schémas de rimes (AABB, ABAB...)
-- [ ] **Métronome & Tap-tempo discret** : caler le débit et le flow directement dans la barre basse
 - [ ] **Mode PWA (installable hors-ligne)** : installation native sur bureau et mobile
-
-
