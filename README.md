@@ -69,7 +69,7 @@ Aucune installation, aucun serveur ni dépendance :
 
 ---
 
-## 🗺️ Raccourcis Clavier
+## ⌨️ Raccourcis Clavier
 
 - `Alt + 1` à `Alt + 6` : Insérer des sections (`[Couplet 1]`, `[Refrain]`, `[Pont]`, etc.)
 - `Alt + A` : Encadrer en ad-lib `( ... )`
@@ -79,4 +79,34 @@ Aucune installation, aucun serveur ni dépendance :
 - `Alt + Z` : Mode Zen plein écran
 - `Ctrl + S` : Sauvegarde manuelle immédiate
 - `Échap` : Quitter le mode Zen / fermer les fenêtres modales
+
+---
+
+## 🗺️ Roadmap & ToDo
+
+### ✅ Déjà implémenté (v1.5)
+
+- [x] **Éditeur de texte fluide** avec marge gauche synchronisée au scroll et aux retours à la ligne
+- [x] **Comptage automatique des pieds/syllabes** en temps réel selon les règles phonétiques françaises
+- [x] **Gestion des acronymes & sigles** : détection automatique et prononciation lettre par lettre (`PDG` = 3, `RATP` = 4, `FBI` = 3...)
+- [x] **Gestion des nombres en chiffres** : conversion phonétique instantanée (`14` = 2, `100` = 1, `2026` = 4...)
+- [x] **Marge épurée en chiffres bruts** : sobre en gris, lueur violette sur la ligne active et édition directe au clic
+- [x] **Décomposition syllabique sur la ligne active** : affichage typographique avec sous-découpe (`·`) et compteurs discrets
+- [x] **Mode Zen plein écran (`Alt + Z`)** : écriture sans distraction avec masquage des menus
+- [x] **Barre de statut basse** : vers, total pieds, moyenne et interrupteur détail
+- [x] **Onglet Genius Lyrics Optimizer 100% Local & Instantané** (normalisation, duplication des refrains/répétitions, ponctuation, majuscules)
+- [x] **Synchronisation bidirectionnelle Studio ↔ Genius**
+- [x] **Sauvegarde locale automatique** (`localStorage`) pour ne jamais perdre ses sessions
+- [x] **Gestionnaire multi-projets** : créer, basculer et gérer plusieurs chansons
+- [x] **Raccourcis clavier complets** : sections, ad-libs, répétitions, déplacement de lignes
+- [x] **Correction orthographique rap & chanson** : respect de l'argot, du slang US et des néologismes
+- [x] **100% autonome et local** : aucune dépendance, aucun serveur
+
+### 🚀 Prochaines étapes (v2.0)
+
+- [ ] **Dictionnaire de rimes & assonances local** : recherche phonétique hors-ligne (rimes riches, suffisantes, assonances)
+- [ ] **Surlignage visuel des rimes** : identification des schémas de rimes (AABB, ABAB...)
+- [ ] **Métronome & Tap-tempo discret** : caler le débit et le flow directement dans la barre basse
+- [ ] **Mode PWA (installable hors-ligne)** : installation native sur bureau et mobile
+
 
