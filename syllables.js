@@ -1,12 +1,12 @@
 /**
- * Lyrr - Moteur de comptage syllabique français pour le rap et la poésie
- * Gère : phonétique française, diphtongues, voyelles nasales, 'e' muets, acronymes et nombres.
+ * Lyrr - French Syllable Counting Engine for Rap and Poetry
+ * Handles: French phonetics, diphthongs, nasal vowels, mute 'e', acronyms, and numbers.
  */
 
 (function (window) {
   'use strict';
 
-  // Table des syllabes de chaque lettre pour la prononciation des acronymes en français
+  // Syllable count for each letter in French acronym pronunciation
   const LETTER_SYLLABLES = {
     'A': 1, // "a"
     'B': 1, // "bé"
@@ -37,8 +37,8 @@
   };
 
   /**
-   * Convertit un nombre entier en texte français
-   * Ex: 14 -> "quatorze", 2026 -> "deux mille vingt-six"
+   * Converts an integer into French written words
+   * E.g.: 14 -> "quatorze", 2026 -> "deux mille vingt-six"
    */
   function numberToFrenchWords(n) {
     if (isNaN(n)) return '';
@@ -121,31 +121,30 @@
   }
 
   /**
-   * Détecte si un jeton est un acronyme (ex: PDG, P.D.G., RATP, FBI, BPM, 404, etc.)
+   * Detects if a token is an acronym (e.g. PDG, P.D.G., RATP, FBI, BPM, 404, etc.)
    */
   function isAcronym(token) {
     if (!token) return false;
-    // Acronyme avec points : P.D.G., F.B.I.
+    // Acronym with dots: P.D.G., F.B.I.
     if (/^[A-Za-z]\.[A-Za-z]\.(?:[A-Za-z]\.)*$/.test(token)) return true;
     
-    // Mot tout en majuscules de 2 à 6 lettres
+    // All uppercase word of 2 to 6 letters
     const cleaned = token.replace(/[^A-Za-z]/g, '');
     if (cleaned.length >= 2 && cleaned.length <= 6 && cleaned === cleaned.toUpperCase()) {
-      // Exclure les mots très courts qui sont des mots réguliers seulement s'ils ont des voyelles ordinaires
-      // Mais dans le rap, PDG, RATP, FBI, HLM, SNCF, USA, OAS, CIA, VIP sont tous des acronymes.
-      // Si aucune voyelle ordinaire (que des consonnes), c'est garanti à 100% : ex: PDG, RATP, SNCF, BPM, HLM
+      // In rap and modern French, acronyms like PDG, RATP, FBI, HLM, SNCF, USA, OAS, CIA, VIP are common.
+      // If no standard vowel is present (consonants only), it is 100% an acronym: e.g., PDG, RATP, SNCF, BPM, HLM
       if (!/[AEIOU]/.test(cleaned)) return true;
-      // Sigles célèbres avec voyelles :
+      // Well-known acronyms with vowels:
       const knownAcronyms = ['USA', 'FBI', 'CIA', 'RATP', 'ONU', 'OAS', 'VIP', 'ADN', 'URL', 'PDF', 'GPS', 'SMS', 'FAQ', 'TER', 'TGV', 'BAC', 'BEP', 'CAP', 'BTS', 'DUT', 'CM2', 'CP', 'CE1', 'CE2', 'RIP', 'RER', 'GIGN', 'CRS', 'SIDA', 'IVG', 'CD', 'DVD', 'USB', 'TV', 'PS', 'KO', 'OK', 'HS', 'DJ', 'MC'];
       if (knownAcronyms.includes(cleaned)) return true;
-      // Par défaut, un mot court tout en majuscule est un acronyme si >= 2 lettres
+      // By default, a short all-uppercase word (>= 2 chars) is treated as an acronym
       return true;
     }
     return false;
   }
 
   /**
-   * Compte les syllabes d'un acronyme prononcé lettre par lettre
+   * Counts syllables of an acronym spelled letter by letter
    */
   function countAcronymSyllables(token) {
     const letters = token.replace(/[^A-Za-z]/g, '').toUpperCase().split('');
@@ -159,39 +158,39 @@
     return { count, details: parts.join('-') };
   }
 
-  // Dictionnaire d'exceptions et mots fréquents en flow rap/parlé
+  // Dictionary of overrides and frequent words in rap/spoken flow
   const WORD_OVERRIDES = {
-    // Monosyllabes fréquents
+    // Frequent monosyllables
     'suis': 1, 'je': 1, 'tu': 1, 'il': 1, 'elle': 1, 'on': 1, 'nous': 1, 'vous': 1, 'ils': 1, 'elles': 1,
     'ce': 1, 'se': 1, 'me': 1, 'te': 1, 'le': 1, 'la': 1, 'les': 1, 'un': 1, 'une': 1, 'des': 1,
     'de': 1, 'du': 1, 'au': 1, 'aux': 1, 'en': 1, 'dans': 1, 'sur': 1, 'par': 1, 'pour': 1, 'sans': 1,
     'et': 1, 'ou': 1, 'mais': 1, 'donc': 1, 'or': 1, 'ni': 1, 'car': 1, 'que': 1, 'qui': 1, 'quoi': 1,
     'dont': 1, 'où': 1, 'quand': 1, 'comme': 1, 'si': 1, 'non': 1, 'oui': 1,
-    // Formes contractées
+    // Contracted forms
     "c'est": 1, 'cest': 1, "j'ai": 1, 'jai': 1, "qu'on": 1, 'quon': 1, "d'un": 1, "d'une": 1,
     "j'suis": 1, "t'es": 1, "y'a": 1, "s'en": 1, "m'en": 1, "t'en": 1, "l'or": 1, "l'eau": 1, "l'air": 1,
-    // Mots avec glide / diphtongues (1 syllabe)
+    // Words with glide / diphthongs (1 syllable)
     'nuit': 1, 'bruit': 1, 'huit': 1, 'lui': 1, 'cuit': 1, 'pluie': 1, 'fuir': 1,
     'moi': 1, 'toi': 1, 'soi': 1, 'roi': 1, 'loi': 1, 'fois': 1, 'voix': 1, 'bois': 1, 'trois': 1,
     'bien': 1, 'rien': 1, 'chien': 1, 'lien': 1, 'tiens': 1, 'viens': 1, 'ciel': 1, 'miel': 1, 'fiel': 1,
     'yeux': 1, 'dieu': 1, 'vieux': 1, 'mieux': 1, 'pied': 1, 'pieds': 1,
-    // Mots 2 syllabes
+    // 2-syllable words
     'heureux': 2, 'quatorze': 2, 'jamais': 2, 'toujours': 2, 'demain': 2, 'hier': 1,
     'matin': 2, 'soir': 1, 'paname': 2, 'paris': 2, 'monde': 1, 'france': 1,
-    // Termes rap / musique
+    // Rap / music terms
     'street': 1, 'flow': 1, 'rap': 1, 'beat': 1, 'track': 1, 'kick': 1, 'snare': 1, 'clap': 1,
     'punchline': 2, 'freestyle': 2, 'microphone': 3, 'studio': 2, 'couplet': 2, 'refrain': 2
   };
 
   /**
-   * Calcule le nombre de syllabes d'un mot individuel
+   * Calculates the syllable count of an individual word
    */
   function countWordSyllables(rawWord, mode = 'rap') {
     if (!rawWord || !rawWord.trim()) return { count: 0, details: '' };
 
     const token = rawWord.trim();
 
-    // 1. Nombre brut : ex: 14 -> "quatorze" (2 syllabes)
+    // 1. Raw number: e.g. 14 -> "quatorze" (2 syllables)
     if (/^\d+$/.test(token)) {
       const spelled = numberToFrenchWords(parseInt(token, 10));
       const res = countLineSyllables(spelled, mode);
@@ -202,7 +201,7 @@
       };
     }
 
-    // 2. Acronyme : ex: PDG -> 3, FBI -> 3, RATP -> 4
+    // 2. Acronym: e.g. PDG -> 3, FBI -> 3, RATP -> 4
     if (isAcronym(token)) {
       const acro = countAcronymSyllables(token);
       return {
@@ -213,16 +212,16 @@
     }
 
     let word = token.toLowerCase();
-    // Conserver lettres accentuées, apostrophes et tirets
+    // Preserve accented letters, apostrophes, and hyphens
     word = word.replace(/[^a-zàâäéèêëîïôöùûüÿçœæ'-]/g, '');
     if (!word) return { count: 0, details: '' };
 
-    // 3. Dictionnaire d'exceptions rapides
+    // 3. Fast exception dictionary
     if (WORD_OVERRIDES[word] !== undefined) {
       return { count: WORD_OVERRIDES[word], details: word };
     }
 
-    // 4. Mots composés avec trait d'union (ex: "rendez-vous", "arc-en-ciel", "peut-être")
+    // 4. Compound words with hyphens (e.g. "rendez-vous", "peut-être")
     if (word.includes('-')) {
       const parts = word.split('-');
       let sum = 0;
@@ -232,15 +231,15 @@
       return { count: Math.max(1, sum), details: word };
     }
 
-    // 5. Élisions avec apostrophe (ex: "j'suis", "t'as", "l'amour", "d'or")
+    // 5. Elisions with apostrophe (e.g. "j'suis", "t'as", "l'amour", "d'or")
     if (word.includes("'")) {
       const parts = word.split("'");
       let sum = 0;
       for (let i = 0; i < parts.length; i++) {
         const p = parts[i];
         if (!p) continue;
-        // Si c'est une consonne seule élidée avant apostrophe ("j'", "t'", "c'", "d'", "l'", "m'", "s'", "n'")
-        // Elle se lie directement au mot suivant sans voyelle supplémentaire
+        // Single elided consonant before apostrophe ("j'", "t'", "c'", "d'", "l'", "m'", "s'", "n'")
+        // binds directly to following word without an extra vowel
         if (i === 0 && p.length === 1) {
           continue;
         }
@@ -249,10 +248,10 @@
       return { count: Math.max(1, sum), details: word };
     }
 
-    // 6. Remplacement phonétique des voyelles complexes
+    // 6. Phonetic reduction of complex vowels
     let s = word;
 
-    // Regroupements triples
+    // Triple vowel clusters
     s = s.replace(/eaux?/g, '@');
     s = s.replace(/œux?/g, '@');
     s = s.replace(/oeux?/g, '@');
@@ -261,7 +260,7 @@
     s = s.replace(/ueill/g, '@y');
     s = s.replace(/aill/g, '@y');
 
-    // Regroupements doubles (voyelles composées équivalentes à 1 son vocalique)
+    // Double vowel clusters (equivalent to 1 vocalic sound)
     s = s.replace(/eau/g, '@');
     s = s.replace(/aux?/g, '@');
     s = s.replace(/aie?s?/g, '@');
@@ -280,32 +279,31 @@
     s = s.replace(/ey/g, '@');
     s = s.replace(/ay/g, '@');
 
-    // "ui" = 1 son diphtongue / glide : suis, huit, nuit, fuite, bruit
+    // "ui" = 1 diphthong / glide: suis, huit, nuit, fuite, bruit
     s = s.replace(/ui/g, '@');
 
-    // Suffixes diphtongues fréquents
+    // Frequent diphthong suffixes
     s = s.replace(/[iy]en(s)?$/g, '@');     // bien, lien, viens
     s = s.replace(/i(er|ez|ed)s?$/g, '@');   // pied, premier, panier, chantez
 
-    // Semi-voyelles / synérèses fréquentes en rap et parole moderne
+    // Semi-vowels / frequent synaeresis in rap and modern speech
     s = s.replace(/i([aeou])/g, '@');       // passion, ciel, yeux, studio
     s = s.replace(/u([aeio])/g, '@');       // lui, nuance
 
-    // 7. Traitement du "e" muet final
+    // 7. Treatment of mute final 'e'
     if (mode === 'rap') {
-      // En rap, le 'e' final n'est quasiment jamais prononcé s'il est précédé d'une consonne
+      // In rap flow, final 'e' preceded by a consonant is almost never pronounced
       if (s.length > 2) {
-        s = s.replace(/([^aeiouy@])ent$/g, '$1');          // terminaison verbale muette
+        s = s.replace(/([^aeiouy@])ent$/g, '$1');          // mute verbal ending
         s = s.replace(/([aeiouy@][^aeiouy@]*)e[sz]?$/g, '$1'); // monde -> mond, portes -> ports
         s = s.replace(/([aeiouy@])e$/g, '$1');             // vie -> vi, joie -> joi
       }
     } else {
-      // Mode classique : les 'e' finaux de mots peuvent être élidés s'ils sont avant voyelle
-      // Dans le cadre isolé du mot, on garde le ecaduc sauf 'e' final direct
+      // Classical mode: word-final 'e' can be elided before vowels
       s = s.replace(/([aeiouy@])e$/g, '$1');
     }
 
-    // 8. Comptage des voyelles restantes
+    // 8. Count remaining vowels
     const matches = s.match(/[@aeiouyàâäéèêëîïôöùûüÿœæ]/g);
     const count = matches ? matches.length : 1;
 
@@ -408,13 +406,13 @@
   function hyphenateWord(token, count) {
     if (count <= 1) return token;
 
-    // Acronyme prononcé lettre par lettre
+    // Acronym pronounced letter by letter
     if (isAcronym(token)) {
       const letters = token.replace(/[^A-Za-z]/g, '').toUpperCase().split('');
       return letters.join('·');
     }
 
-    // Nombre converti
+    // Converted number
     if (/^\d+$/.test(token)) {
       const spelled = numberToFrenchWords(parseInt(token, 10));
       const words = spelled.split(/[\s-]+/);
@@ -434,14 +432,14 @@
   }
 
   /**
-   * Analyse une ligne complète et renvoie le total ainsi que le détail de chaque mot
+   * Analyzes a full line and returns the total syllable count along with details for each word
    */
   function countLineSyllables(line, mode = 'rap') {
     if (!line || !line.trim()) {
       return { total: 0, words: [], isEmpty: true };
     }
 
-    // Découpage en jetons (mots, acronymes à points ou normaux, nombres)
+    // Tokenization (words, dotted or regular acronyms, numbers)
     const tokenRegex = /[A-Za-zÀ-ÖØ-öø-ÿ0-9]+(?:'[A-Za-zÀ-ÖØ-öø-ÿ]+)?|[A-Z]\.[A-Z]\.(?:[A-Z]\.)?/g;
     const tokens = line.match(tokenRegex) || [];
 
@@ -452,7 +450,7 @@
       const token = tokens[i];
       const wordInfo = countWordSyllables(token, mode);
       
-      // En mode poésie classique : si le mot finit par 'e' et que le mot suivant commence par voyelle, élision classique
+      // Classical poetry mode: elision if word ends with 'e' and following word starts with a vowel
       if (mode === 'classique' && i < tokens.length - 1) {
         const nextToken = tokens[i + 1].toLowerCase();
         if (/^[aeiouyàâäéèêëîïôöùûü]/.test(nextToken) && /e[s]?$/i.test(token)) {
@@ -478,7 +476,7 @@
     };
   }
 
-  // Export pour environnement navigateur et Node.js
+  // Export for browser and Node.js environments
   const LyrrSyllables = {
     countWordSyllables,
     countLineSyllables,

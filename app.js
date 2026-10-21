@@ -1,18 +1,18 @@
 /**
- * Lyrr - Studio de Paroles & Compteur de Syllabes
- * Éditeur Ligne-par-Ligne avec ligne de décomposition insérée entre les vers
+ * Lyrr - Lyrics Studio & Syllable Counter
+ * Line-by-Line Document Editor with live syllable counter & local Genius optimizer
  */
 
 (function () {
   'use strict';
 
-  // --- Sélecteurs DOM ---
+  // --- DOM Selectors ---
   const editorLinesContainer = document.getElementById('editorLinesContainer');
   const songTitleInput = document.getElementById('songTitleInput');
   const saveIndicator = document.getElementById('saveIndicator');
   const saveText = document.getElementById('saveText');
 
-  // Stats
+  // Statistics
   const statLineCount = document.getElementById('statLineCount');
   const statSyllableCount = document.getElementById('statSyllableCount');
   const statAvgCount = document.getElementById('statAvgCount');
@@ -32,11 +32,11 @@
   const songsListContainer = document.getElementById('songsListContainer');
   const btnNewSong = document.getElementById('btnNewSong');
 
-  // Toast
+  // Toast Notification
   const toastNotification = document.getElementById('toastNotification');
   const toastMessage = document.getElementById('toastMessage');
 
-  // Tabs Navigation
+  // Tab Navigation
   const tabBtnStudio = document.getElementById('tabBtnStudio');
   const tabBtnGenius = document.getElementById('tabBtnGenius');
   const tabPaneStudio = document.getElementById('tabPaneStudio');
@@ -46,10 +46,8 @@
   const btnGeniusImportStudio = document.getElementById('btnGeniusImportStudio');
   const btnGeniusClear = document.getElementById('btnGeniusClear');
   const btnGeniusFormat = document.getElementById('btnGeniusFormat');
-  const formatBtnText = document.getElementById('formatBtnText');
 
   const geniusInputLyrics = document.getElementById('geniusInputLyrics');
-  const geniusCharCount = document.getElementById('geniusCharCount');
 
   const geniusOutputTools = document.getElementById('geniusOutputTools');
   const btnGeniusSendToStudio = document.getElementById('btnGeniusSendToStudio');
@@ -61,16 +59,15 @@
   const geniusStateEmpty = document.getElementById('geniusStateEmpty');
   const geniusOutputLyrics = document.getElementById('geniusOutputLyrics');
 
-  // --- État de l'application ---
+  // --- Application State ---
   const STORAGE_KEY = 'lyrr_studio_songs_v3';
-  const STORAGE_KEY_GEMINI_KEY = 'lyrr_gemini_api_key';
   const STORAGE_KEY_ACTIVE_TAB = 'lyrr_active_tab';
   const STORAGE_KEY_SHOW_BREAKDOWN = 'lyrr_show_breakdown';
   const MODE = 'rap';
 
   let showBreakdown = true;
 
-  // Canvas helper pour mesurer précisément la largeur du texte
+  // Off-screen canvas helper to accurately measure text width
   const measureCanvas = document.createElement('canvas');
   const measureCtx = measureCanvas.getContext('2d');
 
@@ -87,7 +84,7 @@
   let editingBadgeIndex = null;
   let saveTimeout = null;
 
-  // --- Gestion de l'historique Annuler / Rétablir (Undo / Redo) ---
+  // --- History Management (Undo / Redo) ---
   const MAX_HISTORY = 80;
   let undoStack = [];
   let redoStack = [];
@@ -103,7 +100,7 @@ RATP ou FBI
 C'est la vie sur le bitume
 J'écris mes textes à la plume`;
 
-  // --- Initialisation du stockage local ---
+  // --- Local Storage Initialization & Persistence ---
   function loadStoredData() {
     try {
       const rawSongs = localStorage.getItem(STORAGE_KEY) || 
@@ -113,7 +110,7 @@ J'écris mes textes à la plume`;
         songs = JSON.parse(rawSongs);
       }
     } catch (e) {
-      console.warn('Impossible de charger les chansons', e);
+      console.warn('Unable to load songs from local storage', e);
       songs = [];
     }
 
@@ -132,7 +129,7 @@ J'écris mes textes à la plume`;
       currentSong = songs[0];
     }
 
-    // Charger les lignes du projet actif
+    // Load lines for active project
     lines = (currentSong.content || '').split('\n');
     if (lines.length === 0) lines = [''];
   }
@@ -142,12 +139,12 @@ J'écris mes textes à la plume`;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(songs));
       showSaveStatus(true);
     } catch (e) {
-      console.error('Erreur sauvegarde locale', e);
+      console.error('Local storage save error', e);
       showSaveStatus(false);
     }
   }
 
-  // --- Fonctions d'historique (Undo / Redo) ---
+  // --- History Snapshot Helpers (Undo / Redo) ---
   function getActiveCaretPos() {
     if (activeLineIndex === null || !editorLinesContainer) return 0;
     const activeInput = editorLinesContainer.querySelector(`.line-input[data-index="${activeLineIndex}"]`);
@@ -295,12 +292,27 @@ J'écris mes textes à la plume`;
     }, 2500);
   }
 
+  function commitTypingAndSnapshot() {
+    isTypingBurst = false;
+    clearTimeout(typingBurstTimer);
+    pushUndoSnapshot();
+  }
+
   function escapeHtml(str) {
     if (!str) return '';
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  // --- Rendu de l'éditeur ligne par ligne ---
+  function buildBreakdownChipsHtml(words) {
+    if (!words || !words.length) return '';
+    return words.map((w, idx) => {
+      const extraClass = w.isAcronym ? 'acronym' : (w.isNumber ? 'number' : '');
+      const dot = idx < words.length - 1 ? '<span class="chip-dot">·</span>' : '';
+      return `<div class="word-chip ${extraClass}"><span class="chip-token">${escapeHtml(w.hyphenated || w.token)}</span><span class="chip-count">${w.count}</span></div>${dot}`;
+    }).join('');
+  }
+
+  // --- Line-by-Line Document Rendering ---
   function renderAllLines(focusIndex = null, caretPos = null) {
     if (!editorLinesContainer) return;
 
@@ -330,41 +342,18 @@ J'écris mes textes à la plume`;
         totalSyllablesCount += count;
       }
 
-      // Marquer comme vide si aucun pied calculé
+      // Mark meter as empty if 0 syllables calculated
       const meterClass = (count === 0) ? 'empty' : '';
 
-      // Ligne de décomposition : uniquement sur la ligne active quand elle contient du texte, n'est pas un tag et que showBreakdown est activé
+      // Syllable breakdown: active line only, when non-empty, not a section tag, and showBreakdown is true
       let breakdownHtml = '';
       if (showBreakdown && isActive && lineText.trim().length > 0 && !isTag) {
         if (!syllableResult) {
           syllableResult = LyrrSyllables.countLineSyllables(lineText, MODE);
         }
-
-        let chipsHtml = '';
-        for (let idx = 0; idx < syllableResult.words.length; idx++) {
-          const w = syllableResult.words[idx];
-          let extraClass = '';
-
-          if (w.isAcronym) {
-            extraClass = 'acronym';
-          } else if (w.isNumber) {
-            extraClass = 'number';
-          }
-
-          chipsHtml += `
-            <div class="word-chip ${extraClass}">
-              <span class="chip-token">${escapeHtml(w.hyphenated || w.token)}</span>
-              <span class="chip-count">${w.count}</span>
-            </div>
-          `;
-          if (idx < syllableResult.words.length - 1) {
-            chipsHtml += `<span class="chip-dot">·</span>`;
-          }
-        }
-
         breakdownHtml = `
           <div class="line-breakdown">
-            <div class="breakdown-chips">${chipsHtml}</div>
+            <div class="breakdown-chips">${buildBreakdownChipsHtml(syllableResult.words)}</div>
           </div>
         `;
       }
@@ -413,10 +402,10 @@ J'écris mes textes à la plume`;
 
     editorLinesContainer.innerHTML = html;
 
-    // Mise à jour des stats globales
+    // Update global statistics
     updateGlobalStats();
 
-    // Restaurer le focus (priorité à l'input d'édition directe du badge si actif)
+    // Restore focus (priority to gutter badge input if currently active)
     if (editingBadgeIndex !== null) {
       const badgeInput = editorLinesContainer.querySelector(`.badge-edit-input[data-line="${editingBadgeIndex}"]`);
       if (badgeInput) {
@@ -435,14 +424,14 @@ J'écris mes textes à la plume`;
     }
   }
 
-  // --- Gestion du focus et de la frappe ---
+  // --- Active Line Focus Management ---
   function setActiveLine(index, forceCaretPos = null) {
     if (activeLineIndex === index && forceCaretPos === null) return;
     activeLineIndex = index;
     renderAllLines(index, forceCaretPos);
   }
 
-  // --- Validation et enregistrement de l'ajustement direct du badge ---
+  // --- Direct Inline Syllable Badge Edit & Commit ---
   function commitBadgeEdit(lineIndex, rawVal) {
     if (editingBadgeIndex === null && rawVal === undefined) return;
     editingBadgeIndex = null;
@@ -450,7 +439,7 @@ J'écris mes textes à la plume`;
     const trimmed = (rawVal !== undefined && rawVal !== null ? String(rawVal) : '').trim();
 
     if (trimmed === '') {
-      // Si le champ est vidé : on supprime l'override pour rétablir le calcul automatique
+      // If input is empty: clear manual override to restore automatic syllable counting
       if (currentSong && currentSong.overrides && currentSong.overrides[lineIndex] !== undefined) {
         pushUndoSnapshot();
         delete currentSong.overrides[lineIndex];
@@ -482,7 +471,7 @@ J'écris mes textes à la plume`;
     renderAllLines(prevLine, currentLineLen);
   }
 
-  // --- Calcul et mise à jour des statistiques globales ---
+  // --- Global Stats Calculation ---
   function updateGlobalStats() {
     let totalLinesCount = 0;
     let totalSyllablesCount = 0;
@@ -506,9 +495,9 @@ J'écris mes textes à la plume`;
     statAvgCount.textContent = avg;
   }
 
-  // --- Écouteurs d'événements de l'éditeur ---
+  // --- Line Editor Event Listeners & Shortcuts ---
   function initEditorEvents() {
-    // Focus sur un input de ligne
+    // Focus in on a line text input
     editorLinesContainer.addEventListener('focusin', (e) => {
       const input = e.target.closest('.line-input');
       if (input) {
@@ -520,31 +509,15 @@ J'écris mes textes à la plume`;
       }
     });
 
-    // Modification du texte d'une ligne en temps réel (ultra-fluide, stable et sans tressautement)
-    editorLinesContainer.addEventListener('input', (e) => {
-      const input = e.target.closest('.line-input');
-      if (!input) return;
-
-      const index = parseInt(input.dataset.index, 10);
-
-      // Gestion du burst de frappe pour l'historique Undo
-      if (!isTypingBurst) {
-        pushUndoSnapshot();
-        isTypingBurst = true;
-      }
-      clearTimeout(typingBurstTimer);
-      typingBurstTimer = setTimeout(() => {
-        isTypingBurst = false;
-      }, 700);
-
-      lines[index] = input.value;
+    function updateLineVisuals(input, index, lineText) {
+      lines[index] = lineText;
+      input.value = lineText;
       scheduleAutoSave();
 
-      // Ajuster instantanément la largeur de l'input au texte saisi
-      const inputWidth = Math.max(80, Math.round(measureTextWidth(input.value)) + 24);
+      // Instantly adjust input width to content length
+      const inputWidth = Math.max(80, Math.round(measureTextWidth(lineText)) + 24);
       input.style.width = inputWidth + 'px';
 
-      const lineText = input.value;
       const isTag = /^\[.*\]$/.test(lineText.trim());
       input.classList.toggle('section-tag-input', isTag);
 
@@ -554,7 +527,7 @@ J'écris mes textes à la plume`;
         count = currentSong.overrides[index];
       }
 
-      // Mettre à jour le badge de la marge à gauche
+      // Update left gutter syllable badge
       const row = input.closest('.line-row');
       if (row && editingBadgeIndex !== index) {
         const badge = row.querySelector('.syllable-badge');
@@ -572,30 +545,13 @@ J'écris mes textes à la plume`;
         }
       }
 
-      // Mettre à jour les jetons de décomposition à droite du texte
+      // Update syllable breakdown tokens on the right
       if (row) {
         const main = row.querySelector('.line-main');
         if (main) {
           let breakdownEl = main.querySelector('.line-breakdown');
           if (showBreakdown && lineText.trim().length > 0 && !isTag) {
-            let chipsHtml = '';
-            for (let idx = 0; idx < syllableResult.words.length; idx++) {
-              const w = syllableResult.words[idx];
-              let extraClass = '';
-              if (w.isAcronym) extraClass = 'acronym';
-              else if (w.isNumber) extraClass = 'number';
-
-              chipsHtml += `
-                <div class="word-chip ${extraClass}">
-                  <span class="chip-token">${escapeHtml(w.hyphenated || w.token)}</span>
-                  <span class="chip-count">${w.count}</span>
-                </div>
-              `;
-              if (idx < syllableResult.words.length - 1) {
-                chipsHtml += `<span class="chip-dot">·</span>`;
-              }
-            }
-
+            const chipsHtml = buildBreakdownChipsHtml(syllableResult.words);
             if (!breakdownEl) {
               breakdownEl = document.createElement('div');
               breakdownEl.className = 'line-breakdown';
@@ -609,6 +565,26 @@ J'écris mes textes à la plume`;
       }
 
       updateGlobalStats();
+    }
+
+    // Real-time text input (stable, smooth, jitter-free)
+    editorLinesContainer.addEventListener('input', (e) => {
+      const input = e.target.closest('.line-input');
+      if (!input) return;
+
+      const index = parseInt(input.dataset.index, 10);
+
+      // Manage typing burst for undo history snapshotting
+      if (!isTypingBurst) {
+        pushUndoSnapshot();
+        isTypingBurst = true;
+      }
+      clearTimeout(typingBurstTimer);
+      typingBurstTimer = setTimeout(() => {
+        isTypingBurst = false;
+      }, 700);
+
+      updateLineVisuals(input, index, input.value);
     });
 
     function shiftOverrides(fromIndex, delta) {
@@ -622,9 +598,20 @@ J'écris mes textes à la plume`;
       currentSong.overrides = newOverrides;
     }
 
-    // Navigation clavier et raccourcis rapides
+    function removeOverrideAndShift(removedIndex) {
+      if (!currentSong || !currentSong.overrides) return;
+      const newOverrides = {};
+      for (const [k, v] of Object.entries(currentSong.overrides)) {
+        const ki = parseInt(k, 10);
+        if (ki < removedIndex) newOverrides[ki] = v;
+        else if (ki > removedIndex) newOverrides[ki - 1] = v;
+      }
+      currentSong.overrides = newOverrides;
+    }
+
+    // Keyboard navigation and editor shortcuts
     editorLinesContainer.addEventListener('keydown', (e) => {
-      // Cas 1 : Interaction directe sur l'input de réglage du badge
+      // Case 1: Direct interaction inside gutter badge edit input
       const badgeInput = e.target.closest('.badge-edit-input');
       if (badgeInput) {
         const lineIndex = parseInt(badgeInput.dataset.line, 10);
@@ -657,14 +644,14 @@ J'écris mes textes à la plume`;
           return;
         }
 
-        // Autoriser uniquement les chiffres 0-9 et les touches de contrôle courantes
+        // Allow only digits 0-9 and common control/navigation keys
         if (!/^[0-9]$/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
           e.preventDefault();
         }
         return;
       }
 
-      // Cas 2 : Interaction sur un input de ligne ordinaire
+      // Case 2: Regular line input interaction
       const input = e.target.closest('.line-input');
       if (!input) return;
 
@@ -674,7 +661,7 @@ J'écris mes textes à la plume`;
       const end = input.selectionEnd;
 
       // ======================================================================
-      // ANNULER / RÉTABLIR (Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z)
+      // UNDO / REDO (Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z)
       // ======================================================================
       if ((e.ctrlKey || e.metaKey) && !e.altKey) {
         const isZ = (e.key === 'z' || e.key === 'Z');
@@ -693,17 +680,17 @@ J'écris mes textes à la plume`;
         }
       }
 
-      // Espace : valider le bloc de frappe actuel pour le prochain Undo
+      // Space key: commit current typing burst for next undo
       if (e.key === ' ') {
         isTypingBurst = false;
         clearTimeout(typingBurstTimer);
       }
 
       // ======================================================================
-      // RACCOURCIS CLAVIER RAPIDES (Tags de structure, Ad-libs, Édition)
+      // QUICK KEYBOARD SHORTCUTS (Structure tags, Ad-libs, Editing)
       // ======================================================================
 
-      // ALT + Chiffres du haut du clavier (AZERTY: &, é, ", ', (, - | QWERTY: 1..6)
+      // ALT + Top-row number keys (AZERTY: &, é, ", ', (, - | QWERTY: 1..6)
       if (e.altKey && !e.ctrlKey && !e.metaKey) {
         let tag = null;
 
@@ -715,7 +702,7 @@ J'écris mes textes à la plume`;
         const isKey6 = (e.code === 'Digit6' || e.key === '-' || e.key === '6') && e.code !== 'Numpad6';
 
         if (isKey1) {
-          // Compter les couplets existants pour auto-incrémentation [Couplet 1], [Couplet 2]...
+          // Count existing verses for auto-increment [Couplet 1], [Couplet 2]...
           let coupletCount = 0;
           for (let c = 0; c < lines.length; c++) {
             if (/^\[Couplet(?:\s+(\d+))?/i.test(lines[c].trim())) coupletCount++;
@@ -728,26 +715,24 @@ J'écris mes textes à la plume`;
         } else if (isKey4) {
           tag = '[Pont]';
         } else if (isKey5) {
-          tag = '[Intro]';
+          tag = (start < end) ? null : '[Intro]';
         } else if (isKey6) {
           tag = '[Outro]';
         }
 
         if (tag) {
           e.preventDefault();
-          isTypingBurst = false;
-          clearTimeout(typingBurstTimer);
-          pushUndoSnapshot();
+          commitTypingAndSnapshot();
 
           if (!val.trim()) {
-            // Ligne vide : devient le tag, et crée une ligne vide en-dessous prête à écrire
+            // Empty line: becomes section tag and inserts an empty line below ready to write
             lines[index] = tag;
             lines.splice(index + 1, 0, '');
             shiftOverrides(index, 1);
             scheduleAutoSave();
             renderAllLines(index + 1, 0);
           } else {
-            // Ligne avec texte : insère le tag au-dessus
+            // Non-empty line: inserts section tag above current line
             lines.splice(index, 0, tag);
             shiftOverrides(index - 1, 1);
             scheduleAutoSave();
@@ -758,58 +743,83 @@ J'écris mes textes à la plume`;
         }
       }
 
-      // ALT + A : Formater en Ad-lib (entourer de parenthèses)
+      // ALT + A: Format as Ad-lib (wrap in parentheses)
       if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === 'a' || e.key === 'A')) {
         e.preventDefault();
-        isTypingBurst = false;
-        clearTimeout(typingBurstTimer);
-        pushUndoSnapshot();
+        commitTypingAndSnapshot();
         if (start < end) {
           const selected = val.slice(start, end);
           const wrapped = `(${selected})`;
-          lines[index] = val.slice(0, start) + wrapped + val.slice(end);
-          scheduleAutoSave();
-          renderAllLines(index, start + wrapped.length);
+          const newText = val.slice(0, start) + wrapped + val.slice(end);
+          updateLineVisuals(input, index, newText);
+          input.setSelectionRange(start + 1, end + 1);
         } else {
           const trimmed = val.trim();
+          let newText = '';
           if (!trimmed) {
-            lines[index] = '()';
-            scheduleAutoSave();
-            renderAllLines(index, 1);
+            newText = '()';
           } else if (trimmed.startsWith('(') && trimmed.endsWith(')')) {
-            lines[index] = trimmed.slice(1, -1).trim();
-            scheduleAutoSave();
-            renderAllLines(index, lines[index].length);
+            newText = trimmed.slice(1, -1).trim();
           } else {
-            lines[index] = `(${trimmed})`;
-            scheduleAutoSave();
-            renderAllLines(index, lines[index].length);
+            newText = `(${trimmed})`;
           }
+          updateLineVisuals(input, index, newText);
+          input.setSelectionRange(newText.length, newText.length);
         }
         showToast('Ad-lib formaté ( ) !');
         return;
       }
 
-      // TOUCHE '(' : si du texte est sélectionné, entourer automatiquement (style VS Code)
-      if (e.key === '(' && start < end && !e.altKey && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault();
-        isTypingBurst = false;
-        clearTimeout(typingBurstTimer);
-        pushUndoSnapshot();
-        const selected = val.slice(start, end);
-        const wrapped = `(${selected})`;
-        lines[index] = val.slice(0, start) + wrapped + val.slice(end);
-        scheduleAutoSave();
-        renderAllLines(index, start + wrapped.length);
-        return;
+      // '(' or ')' Key: Auto-wrap selection with ( ) or Auto-close () (VS Code style)
+      const isParenKey = (e.key === '(' || e.key === ')');
+      if (isParenKey && !e.ctrlKey && !e.metaKey) {
+        if (start < end) {
+          // Case 1: Text selected -> Auto-wrap selection with ( )
+          e.preventDefault();
+          commitTypingAndSnapshot();
+
+          const selected = val.slice(start, end);
+          const wrapped = `(${selected})`;
+          const newText = val.slice(0, start) + wrapped + val.slice(end);
+
+          updateLineVisuals(input, index, newText);
+          // Keep inner content selected for immediate visual feedback (VS Code behavior)
+          input.setSelectionRange(start + 1, end + 1);
+          return;
+        } else if (!e.altKey && e.key === '(') {
+          // Case 2: No text selected and typed '(' -> Auto-close () with caret inside (|)
+          e.preventDefault();
+          commitTypingAndSnapshot();
+
+          const newText = val.slice(0, start) + '()' + val.slice(end);
+          updateLineVisuals(input, index, newText);
+          input.setSelectionRange(start + 1, start + 1);
+          return;
+        } else if (!e.altKey && e.key === ')' && start === end && val.charAt(start) === ')') {
+          // Case 3: Typed ')' right before an existing ')' -> Step over it
+          e.preventDefault();
+          input.setSelectionRange(start + 1, start + 1);
+          return;
+        }
       }
 
-      // ALT + X : Répétition rapide (x2) en fin de ligne
+      // Backspace between empty parentheses: delete both ()
+      if (e.key === 'Backspace' && start === end && start > 0 && !e.altKey && !e.ctrlKey && !e.metaKey) {
+        if (val.charAt(start - 1) === '(' && val.charAt(start) === ')') {
+          e.preventDefault();
+          commitTypingAndSnapshot();
+
+          const newText = val.slice(0, start - 1) + val.slice(start + 1);
+          updateLineVisuals(input, index, newText);
+          input.setSelectionRange(start - 1, start - 1);
+          return;
+        }
+      }
+
+      // ALT + X: Quick repetition (x2) at end of line
       if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === 'x' || e.key === 'X')) {
         e.preventDefault();
-        isTypingBurst = false;
-        clearTimeout(typingBurstTimer);
-        pushUndoSnapshot();
+        commitTypingAndSnapshot();
         const trimmed = val.trim();
         if (/\s*\(x2\)$/i.test(trimmed)) {
           lines[index] = trimmed.replace(/\s*\(x2\)$/i, '');
@@ -822,23 +832,13 @@ J'écris mes textes à la plume`;
         return;
       }
 
-      // ALT + D : Supprimer rapidement la ligne courante
+      // ALT + D: Quickly delete current line
       if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === 'd' || e.key === 'D')) {
         e.preventDefault();
-        isTypingBurst = false;
-        clearTimeout(typingBurstTimer);
-        pushUndoSnapshot();
+        commitTypingAndSnapshot();
         if (lines.length > 1) {
           lines.splice(index, 1);
-          if (currentSong && currentSong.overrides) {
-            const newOverrides = {};
-            for (const [k, v] of Object.entries(currentSong.overrides)) {
-              const ki = parseInt(k, 10);
-              if (ki < index) newOverrides[ki] = v;
-              else if (ki > index) newOverrides[ki - 1] = v;
-            }
-            currentSong.overrides = newOverrides;
-          }
+          removeOverrideAndShift(index);
           scheduleAutoSave();
           const targetIndex = Math.min(index, lines.length - 1);
           renderAllLines(targetIndex, (lines[targetIndex] || '').length);
@@ -852,13 +852,11 @@ J'écris mes textes à la plume`;
         return;
       }
 
-      // ALT + FLÈCHE HAUT : monter la ligne
+      // ALT + Up Arrow: Move line up
       if (e.altKey && !e.ctrlKey && !e.metaKey && e.key === 'ArrowUp') {
         if (index > 0) {
           e.preventDefault();
-          isTypingBurst = false;
-          clearTimeout(typingBurstTimer);
-          pushUndoSnapshot();
+          commitTypingAndSnapshot();
           const temp = lines[index];
           lines[index] = lines[index - 1];
           lines[index - 1] = temp;
@@ -878,13 +876,11 @@ J'écris mes textes à la plume`;
         return;
       }
 
-      // ALT + FLÈCHE BAS : descendre la ligne
+      // ALT + Down Arrow: Move line down
       if (e.altKey && !e.ctrlKey && !e.metaKey && e.key === 'ArrowDown') {
         if (index < lines.length - 1) {
           e.preventDefault();
-          isTypingBurst = false;
-          clearTimeout(typingBurstTimer);
-          pushUndoSnapshot();
+          commitTypingAndSnapshot();
           const temp = lines[index];
           lines[index] = lines[index + 1];
           lines[index + 1] = temp;
@@ -904,12 +900,10 @@ J'écris mes textes à la plume`;
         return;
       }
 
-      // TOUCHE ENTRÉE : couper la ligne et créer une nouvelle ligne en-dessous
+      // Enter key: Split current line and insert a new line below
       if (e.key === 'Enter') {
         e.preventDefault();
-        isTypingBurst = false;
-        clearTimeout(typingBurstTimer);
-        pushUndoSnapshot();
+        commitTypingAndSnapshot();
         const left = val.slice(0, start);
         const right = val.slice(end);
         lines[index] = left;
@@ -920,61 +914,36 @@ J'écris mes textes à la plume`;
         return;
       }
 
-      // TOUCHE RETOUR ARRIÈRE (Backspace) : si au début de la ligne, fusionner avec la ligne précédente
+      // Backspace key: If caret is at line start, merge with previous line
       if (e.key === 'Backspace' && start === 0 && end === 0) {
         if (index > 0) {
           e.preventDefault();
-          isTypingBurst = false;
-          clearTimeout(typingBurstTimer);
-          pushUndoSnapshot();
+          commitTypingAndSnapshot();
           const prevLen = lines[index - 1].length;
           lines[index - 1] += val;
           lines.splice(index, 1);
-
-          // Réajuster les overrides
-          if (currentSong.overrides) {
-            const newOverrides = {};
-            for (const [k, v] of Object.entries(currentSong.overrides)) {
-              const ki = parseInt(k, 10);
-              if (ki < index) newOverrides[ki] = v;
-              else if (ki > index) newOverrides[ki - 1] = v;
-            }
-            currentSong.overrides = newOverrides;
-          }
-
+          removeOverrideAndShift(index);
           scheduleAutoSave();
           setActiveLine(index - 1, prevLen);
         }
         return;
       }
 
-      // TOUCHE SUPPR (Delete) : si à la fin de la ligne, fusionner avec la ligne suivante
+      // Delete key: If caret is at line end, merge with next line
       if (e.key === 'Delete' && start === val.length && end === val.length) {
         if (index < lines.length - 1) {
           e.preventDefault();
-          isTypingBurst = false;
-          clearTimeout(typingBurstTimer);
-          pushUndoSnapshot();
+          commitTypingAndSnapshot();
           lines[index] += lines[index + 1];
           lines.splice(index + 1, 1);
-
-          if (currentSong.overrides) {
-            const newOverrides = {};
-            for (const [k, v] of Object.entries(currentSong.overrides)) {
-              const ki = parseInt(k, 10);
-              if (ki <= index) newOverrides[ki] = v;
-              else if (ki > index + 1) newOverrides[ki - 1] = v;
-            }
-            currentSong.overrides = newOverrides;
-          }
-
+          removeOverrideAndShift(index + 1);
           scheduleAutoSave();
           renderAllLines(index, start);
         }
         return;
       }
 
-      // FLÈCHE HAUT : monter à la ligne du dessus
+      // Up Arrow: Move to previous line
       if (e.key === 'ArrowUp') {
         if (index > 0) {
           e.preventDefault();
@@ -983,7 +952,7 @@ J'écris mes textes à la plume`;
         return;
       }
 
-      // FLÈCHE BAS : descendre à la ligne du dessous
+      // Down Arrow: Move to next line
       if (e.key === 'ArrowDown') {
         if (index < lines.length - 1) {
           e.preventDefault();
@@ -993,7 +962,7 @@ J'écris mes textes à la plume`;
       }
     });
 
-    // COLLER DU TEXTE MULTI-LIGNES
+    // Multi-line paste handling
     editorLinesContainer.addEventListener('paste', (e) => {
       const input = e.target.closest('.line-input');
       if (!input) return;
@@ -1002,12 +971,10 @@ J'écris mes textes à la plume`;
       if (!clipboardData) return;
 
       const pastedText = clipboardData.getData('text');
-      if (!pastedText || !pastedText.includes('\n')) return; // Laisser le comportement par défaut si une seule ligne
+      if (!pastedText || !pastedText.includes('\n')) return; // Allow native single-line paste
 
       e.preventDefault();
-      isTypingBurst = false;
-      clearTimeout(typingBurstTimer);
-      pushUndoSnapshot();
+      commitTypingAndSnapshot();
       const index = parseInt(input.dataset.index, 10);
       const val = input.value;
       const start = input.selectionStart;
@@ -1031,7 +998,7 @@ J'écris mes textes à la plume`;
       setActiveLine(lastPastedIndex, targetCaret);
     });
 
-    // Validation automatique lors du blur (clic ailleurs) de l'input d'édition du badge
+    // Auto-commit badge edit on blur (click outside badge input)
     editorLinesContainer.addEventListener('focusout', (e) => {
       const badgeInput = e.target.closest('.badge-edit-input');
       if (badgeInput && editingBadgeIndex !== null) {
@@ -1040,7 +1007,7 @@ J'écris mes textes à la plume`;
       }
     });
 
-    // Clic sur le badge de la marge pour le rendre éditable directement
+    // Click on gutter syllable badge to make it directly editable
     editorLinesContainer.addEventListener('click', (e) => {
       const badge = e.target.closest('.syllable-badge');
       if (badge && badge.dataset.line !== undefined && !badge.classList.contains('tag-badge')) {
@@ -1057,12 +1024,12 @@ J'écris mes textes à la plume`;
       }
     });
 
-    // Gestion du clic dans l'éditeur : cliquer n'importe où sur une ligne (à droite ou à gauche) active le mode édition
+    // Editor click handling: clicking anywhere on a line activates edit mode
     editorLinesContainer.addEventListener('mousedown', (e) => {
-      // 1. Clic sur le badge dans la marge ou son input d'édition : ne pas interférer
+      // 1. Click on gutter badge or badge edit input: do not interfere
       if (e.target.closest('.syllable-badge') || e.target.closest('.badge-edit-input')) return;
 
-      // Si un badge était en cours d'édition et qu'on clique ailleurs
+      // If another badge was being edited, commit it first
       if (editingBadgeIndex !== null) {
         const badgeInput = editorLinesContainer.querySelector('.badge-edit-input');
         if (badgeInput) {
@@ -1070,13 +1037,13 @@ J'écris mes textes à la plume`;
         }
       }
 
-      // 2. Clic sur une ligne (sur le texte, sur les jetons, à droite ou dans le vide de la ligne)
+      // 2. Click on a line row (text, tokens, or trailing empty space)
       const row = e.target.closest('.line-row');
       if (row) {
         const index = parseInt(row.dataset.index, 10);
         const input = row.querySelector('.line-input');
 
-        // Si le clic n'a pas été fait directement sur l'input texte lui-même (ex: clic à droite du texte)
+        // If click wasn't directly on text input (e.g. click in trailing area)
         if (e.target !== input) {
           e.preventDefault();
           if (activeLineIndex !== index) {
@@ -1090,7 +1057,7 @@ J'écris mes textes à la plume`;
         return;
       }
 
-      // 3. Clic dans la zone vide en-dessous de toutes les lignes
+      // 3. Click in empty space below all lines
       if (lines.length > 0) {
         const lastIndex = lines.length - 1;
         if (activeLineIndex !== lastIndex) {
@@ -1106,7 +1073,7 @@ J'écris mes textes à la plume`;
       }
     });
 
-    // Clic en-dehors de l'éditeur : valide l'édition de badge si en cours
+    // Click outside editor: commit badge edit if active
     document.addEventListener('mousedown', (e) => {
       if (!editorLinesContainer.contains(e.target)) {
         if (editingBadgeIndex !== null) {
@@ -1119,7 +1086,7 @@ J'écris mes textes à la plume`;
     });
   }
 
-  // --- Exportation & Copie ---
+  // --- Export & Clipboard ---
   function copyToClipboard(text, successMsg) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(() => {
@@ -1174,7 +1141,7 @@ J'écris mes textes à la plume`;
     showToast(`Fichier ${title}.txt téléchargé !`);
   }
 
-  // --- Gestion des Projets / Chansons ---
+  // --- Projects & Songs Management ---
   function openProjectsModal() {
     renderSongsList();
     projectsModal.classList.add('open');
@@ -1201,12 +1168,7 @@ J'écris mes textes à la plume`;
             <span class="song-item-date">${linesCount} vers • Modifié le ${dateStr}</span>
           </div>
           ${songs.length > 1 ? `
-            <button class="btn-icon-sm btn-delete-song" data-id="${s.id}" title="Supprimer ce texte">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="3 6 5 6 21 6"></polyline>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-              </svg>
-            </button>
+            <button class="btn-icon-sm btn-delete-song" data-id="${s.id}" title="Supprimer ce texte"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
           ` : ''}
         </div>
       `;
@@ -1259,496 +1221,12 @@ J'écris mes textes à la plume`;
     switchSong(currentSong.id);
   }
 
-  // --- Genius Lyrics Optimizer Logic (100% Local & Instant) ---
-  const GENIUS_SECTION_MAP = [
-    { match: /^(intro|introduction)/i, label: 'Intro', isRefrain: false },
-    { match: /^(outro|conclusion|fin)/i, label: 'Outro', isRefrain: false },
-    { match: /^(pr[ée]-?refrain|pre-?chorus|pr[ée]-?hook|prerefrain|prechorus)/i, label: 'Pré-refrain', isRefrain: false },
-    { match: /^(post-?refrain|post-?chorus|post-?hook|postrefrain|postchorus)/i, label: 'Post-refrain', isRefrain: false },
-    { match: /^(refrain|chorus|hook)/i, label: 'Refrain', isRefrain: true },
-    { match: /^(pont|bridge|transition)/i, label: 'Pont', isRefrain: false },
-    { match: /^(couplet|verse|strophe|partie)/i, label: 'Couplet', isRefrain: false },
-    { match: /^(interlude|skit)/i, label: 'Interlude', isRefrain: false },
-    { match: /^(break|breakdown|drop)/i, label: 'Break', isRefrain: false },
-    { match: /^(solo(?:\s+(?:guitare|piano|sax))?)/i, label: 'Solo', isRefrain: false }
-  ];
-
-  function toTitleCase(str) {
-    if (!str) return '';
-    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
-  }
-
-  function formatArtistName(artistStr) {
-    if (!artistStr) return '';
-    return artistStr.trim().split(/\s+/).map(w => {
-      // Préserver les acronymes courts d'artistes (SCH, PLK, RK, NTM, 13...)
-      if (w.toUpperCase() === w && w.length <= 4) return w;
-      return toTitleCase(w);
-    }).join(' ');
-  }
-
-  function identifyGeniusHeader(lineStr) {
-    let text = lineStr.trim();
-    if (!text) return null;
-
-    // Retirer décorations
-    text = text.replace(/^[-=~*#_]+\s*/, '').replace(/\s*[-=~*#_]+$/, '').trim();
-    // Retirer numérotation de début (ex: "1. Intro", "2) Couplet")
-    text = text.replace(/^\d+[\.\)\-]\s+/, '').trim();
-
-    const hasEnclosing = (/^\[.*\]$/.test(text)) || (/^\(.*\)$/.test(text));
-    let content = text.replace(/^[\[\(]\s*/, '').replace(/\s*[\]\)]$/, '').trim();
-
-    let mult = 1;
-    const multRegex = /\s*\(?(?:x\s*(\d+)|repeat\s*x?\s*(\d+)|\*(\d+)|bis)\)?\.?$/i;
-    const multMatch = content.match(multRegex);
-    if (multMatch) {
-      mult = parseInt(multMatch[1] || multMatch[2] || multMatch[3] || '2', 10);
-      content = content.replace(multRegex, '').trim();
+  // --- Genius Optimizer Delegation (see genius.js) ---
+  function formatLyricsGeniusLocal(raw, options) {
+    if (typeof LyrrGenius !== 'undefined' && LyrrGenius.formatLyricsGeniusLocal) {
+      return LyrrGenius.formatLyricsGeniusLocal(raw, options);
     }
-
-    let secPart = content;
-    let artistPart = '';
-
-    const artistSplitRegex = /^(.*?)(?:\s*(?:[:\-|–—]|feat\.?|ft\.?)\s*|\s+\()([^\)]+)\)?$/i;
-    const splitMatch = content.match(artistSplitRegex);
-    if (splitMatch && splitMatch[1] && splitMatch[2]) {
-      const p1 = splitMatch[1].trim();
-      const p2 = splitMatch[2].trim().replace(/\)$/, '');
-      const isKnown = GENIUS_SECTION_MAP.some(s => s.match.test(p1));
-      if (isKnown) {
-        secPart = p1;
-        artistPart = p2;
-      }
-    }
-
-    let matchedDef = null;
-    for (const sec of GENIUS_SECTION_MAP) {
-      if (sec.match.test(secPart)) {
-        matchedDef = sec;
-        break;
-      }
-    }
-
-    if (!matchedDef) {
-      if (hasEnclosing && content.length <= 45 && !/[.!?]/.test(content)) {
-        const cleanCustom = content.charAt(0).toUpperCase() + content.slice(1);
-        return {
-          formatted: `[${cleanCustom}]`,
-          multiplier: mult,
-          isRefrain: /refrain|chorus|hook/i.test(cleanCustom)
-        };
-      }
-      return null;
-    }
-
-    const numMatch = secPart.match(/\b(\d+)\b/);
-    let finalLabel = matchedDef.label;
-    if (numMatch && (matchedDef.label === 'Couplet' || matchedDef.label === 'Partie')) {
-      finalLabel += ` ${numMatch[1]}`;
-    }
-
-    if (artistPart) {
-      finalLabel += ` : ${formatArtistName(artistPart)}`;
-    }
-
-    return {
-      formatted: `[${finalLabel}]`,
-      multiplier: mult,
-      isRefrain: matchedDef.isRefrain
-    };
-  }
-
-  // Whitelist de termes d'argot, verlan, street, US trap/drill, interjections à préserver impérativement
-  const SLANG_WHITELIST = new Set([
-    'wesh', 'binks', 'bicrave', 'bicraver', 'gadji', 'gadjo', 'reuf', 'reufré', 'reum', 'reup',
-    'daron', 'daronne', 'kiffer', 'kiff', 'kiffe', 'zbeul', 'tarpin', 'peuf', 'ter-ter', 'charbon',
-    'charbonner', 'charbonne', 'caler', 'hess', 'zer', 'iencli', 'ien-cli', 'beuh', 'meuf', 'keuf',
-    'teubé', 'relou', 'chelou', 'vénère', 'chanmé', 'zarbi', 'bédo', 'bedo', 'seum', 'kho', 'khoya',
-    'fréro', 'frérot', 'frero', 'frerot', 'moula', 'mola', 'go', 'bae', 'tipeu', 'narvalo', 'taga',
-    'teh', 'chouf', 'chouffe', 'shmeta', 'condé', 'conde', 'tise', 'tiser', 'taff', 'taffer', 'brolik',
-    'bécanne', 'becanne', 'gamos', 'pilon', 'pera', 'pe-ra', 'zik', 'dégun', 'degun', 'fada', 'skeu',
-    'cimer', 'poucave', 'zgeg', 'chicha', 'boulot', 'blaze', 'oseille', 'flouze', 'pèze', 'peze',
-    'maille', 'lovés', 'loves', 'biff', 'gun', 'schlass', 'beurette', 'babtou', 'renoi', 'céfran',
-    'cefran', 'keus', 'pécho', 'pecho', 'choppé', 'choppe', 'calba',
-    'skrrt', 'skrt', 'draco', 'drip', 'sauce', 'ops', 'opps', 'shawty', 'flex', 'flexer',
-    'trap', 'trappeur', 'plug', 'gang', 'hood', 'bro', 'homie', 'goat', 'chill', 'chillin', 'vibe',
-    'flow', 'beat', 'drill', 'feat', 'ft', 'fade', 'cash', 'racks', 'stack', 'bad', 'mood', 'bitch',
-    'hustle', 'game', 'mic', 'drop', 'cliqua', 'squad', 'beef', 'spin', 'glide', 'slide', 'cap',
-    'glock', 'choppa', 'lean', 'weed', 'blunt', 'joint', 'dope', 'ice', 'chain', 'grillz',
-    'ouais', 'nan', 'nah', 'nope', 'yep', 'yo', 'yeah', 'skkrt', 'brrr', 'grrr', 'bang', 'paw'
-  ]);
-
-  const WORD_SPELL_MAP = {
-    'deja': 'déjà',
-    'déja': 'déjà',
-    'dejà': 'déjà',
-    'meme': 'même',
-    'memes': 'mêmes',
-    'tres': 'très',
-    'etre': 'être',
-    'bientot': 'bientôt',
-    'plutot': 'plutôt',
-    'aussitot': 'aussitôt',
-    'apres': 'après',
-    'pres': 'près',
-    'pret': 'prêt',
-    'prets': 'prêts',
-    'prete': 'prête',
-    'pretes': 'prêtes',
-    'tete': 'tête',
-    'tetes': 'têtes',
-    'reve': 'rêve',
-    'reves': 'rêves',
-    'rever': 'rêver',
-    'reveur': 'rêveur',
-    'fete': 'fête',
-    'fetes': 'fêtes',
-    'feter': 'fêter',
-    'foret': 'forêt',
-    'forets': 'forêts',
-    'fenetre': 'fenêtre',
-    'fenetres': 'fenêtres',
-    'arrete': 'arrête',
-    'arretes': 'arrêtes',
-    'arreter': 'arrêter',
-    'coeur': 'cœur',
-    'coeurs': 'cœurs',
-    'soeur': 'sœur',
-    'soeurs': 'sœurs',
-    'noeud': 'nœud',
-    'noeuds': 'nœuds',
-    'voeu': 'vœu',
-    'voeux': 'vœux',
-    'voila': 'voilà',
-    'plait': 'plaît',
-    'connait': 'connaît',
-    'reconnait': 'reconnaît',
-    'disparait': 'disparaît',
-    'parait': 'paraît',
-    'naitre': 'naître',
-    'toujour': 'toujours',
-    'jamai': 'jamais',
-    'parceque': 'parce que',
-    'quelquun': "quelqu'un",
-    'quelquune': "quelqu'une",
-    'daccord': "d'accord",
-    'aujourdhui': "aujourd'hui",
-    'ecrit': 'écrit',
-    'ecrite': 'écrite',
-    'ecrits': 'écrits',
-    'repond': 'répond',
-    'repondu': 'répondu',
-    'repondre': 'répondre',
-    'equipe': 'équipe',
-    'equipes': 'équipes',
-    'verite': 'vérité',
-    'realite': 'réalité',
-    'liberte': 'liberté',
-    'fidelite': 'fidélité',
-    'societe': 'société',
-    'annee': 'année',
-    'annees': 'années',
-    'soiree': 'soirée',
-    'soirees': 'soirées',
-    'journee': 'journée',
-    'journees': 'journées'
-  };
-
-  const PHRASE_SPELL_RULES = [
-    { regex: /\b(est|sont|suis|es|sommes|êtes|était|étaient|être)\s+la\b/gi, replace: '$1 là' },
-    { regex: /\bqui\s+est\s+la\b/gi, replace: 'qui est là' },
-    { regex: /\bpas\s+a\s+pas\b/gi, replace: 'pas à pas' },
-    { regex: /\bpeu\s+a\s+peu\b/gi, replace: 'peu à peu' },
-    { regex: /\bpeut\s+etre\b/gi, replace: 'peut-être' },
-    { regex: /\bpeut-etre\b/gi, replace: 'peut-être' },
-    { regex: /\bau\s+dela\b/gi, replace: 'au-delà' },
-    { regex: /\bau-dela\b/gi, replace: 'au-delà' },
-    { regex: /\bla\s+bas\b/gi, replace: 'là-bas' },
-    { regex: /\bla-bas\b/gi, replace: 'là-bas' },
-    { regex: /\bc'est\s+a\s+dire\b/gi, replace: "c'est-à-dire" },
-    { regex: /\bc'est-a-dire\b/gi, replace: "c'est-à-dire" },
-    { regex: /\bvis\s+a\s+vis\b/gi, replace: "vis-à-vis" },
-    { regex: /\bvis-a-vis\b/gi, replace: "vis-à-vis" },
-    { regex: /\bgrace\s+a\b/gi, replace: 'grâce à' },
-    { regex: /\bgrâce\s+a\b/gi, replace: 'grâce à' },
-    { regex: /\btout\s+a\s+fait\b/gi, replace: 'tout à fait' },
-    { regex: /\btout\s+a\s+coup\b/gi, replace: 'tout à coup' },
-    { regex: /\bface\s+a\b/gi, replace: 'face à' },
-    { regex: /\bquant\s+a\b/gi, replace: 'quant à' },
-    { regex: /\bjusqu['’\s]*a\b/gi, replace: "jusqu'à" },
-    { regex: /\bbien\s+sur\b/gi, replace: 'bien sûr' },
-    { regex: /\ba\s+coup\s+sur\b/gi, replace: 'à coup sûr' },
-    { regex: /\bpour\s+sur\b/gi, replace: 'pour sûr' },
-    { regex: /\bsur\s+et\s+certain\b/gi, replace: 'sûr et certain' },
-    { regex: /\bquelque\s+soit\b/gi, replace: 'quel que soit' },
-    { regex: /\bquelque\s+soient\b/gi, replace: 'quel que soient' },
-    { regex: /\bca\s+(va|fait|marche|tourne|chauffe|part|roule|plane|donne|vient|sent|ressemble|me|te|nous|vous|lui|leur|commence)\b/gi, replace: 'ça $1' },
-    { regex: /\bc'est\s+ca\b/gi, replace: "c'est ça" },
-    { regex: /\bcomme\s+ca\b/gi, replace: 'comme ça' },
-    { regex: /\bpour\s+ca\b/gi, replace: 'pour ça' },
-    { regex: /\btout\s+ca\b/gi, replace: 'tout ça' },
-    { regex: /\bsans\s+ca\b/gi, replace: 'sans ça' },
-    { regex: /\bd['’]ou\b/gi, replace: "d'où" },
-    { regex: /\bpar\s+ou\b/gi, replace: 'par où' },
-    { regex: /\bla\s+ou\b/gi, replace: 'là où' },
-    { regex: /\blà\s+ou\b/gi, replace: 'là où' },
-    { regex: /\bvers\s+ou\b/gi, replace: 'vers où' },
-    { regex: /\bjusqu['’]ou\b/gi, replace: "jusqu'où" },
-    { regex: /\bou\s+(tu\s+vas|je\s+vais|on\s+va|il\s+va|elle\s+va|nous\s+allons|vous\s+allez|ils\s+vont)\b/gi, replace: 'où $1' },
-    { regex: /\b(a)\s+(la|l'|le|mon|ma|mes|ton|ta|tes|son|sa|ses|notre|nos|votre|vos|leur|leurs|côté|jamais|fond|mort|peine|nouveau|part|travers|bout|cause|ce\s+point|cet|cette|ces|qui|quoi|chacun|tous|toutes|deux|trois|quatre|dix|cent|mille)\b/gi, replace: 'à $2' }
-  ];
-
-  function preserveCase(original, replacement) {
-    if (original === original.toUpperCase() && original.length > 1) {
-      return replacement.toUpperCase();
-    }
-    if (original.charAt(0) === original.charAt(0).toUpperCase()) {
-      return replacement.charAt(0).toUpperCase() + replacement.slice(1);
-    }
-    return replacement;
-  }
-
-  function correctLyricsSpelling(line, stats) {
-    let updated = line;
-
-    for (const rule of PHRASE_SPELL_RULES) {
-      updated = updated.replace(rule.regex, (match, ...args) => {
-        let rep = rule.replace;
-        if (rep.includes('$')) {
-          rep = rep.replace(/\$(\d+)/g, (_, num) => args[parseInt(num, 10) - 1] || '');
-        }
-        if (match.toLowerCase() !== rep.toLowerCase()) {
-          stats.spellingCorrected++;
-        }
-        return preserveCase(match, rep);
-      });
-    }
-
-    updated = updated.replace(/\b([a-zA-Zà-öø-ÿ]+)\b/g, (match) => {
-      const lower = match.toLowerCase();
-      if (SLANG_WHITELIST.has(lower)) {
-        return match;
-      }
-      if (WORD_SPELL_MAP[lower]) {
-        const target = WORD_SPELL_MAP[lower];
-        if (match !== target) {
-          stats.spellingCorrected++;
-          return preserveCase(match, target);
-        }
-      }
-      return match;
-    });
-
-    return updated;
-  }
-
-  function cleanLyricLine(lineStr, stats, enableSpellcheck = true) {
-    let line = lineStr.trim();
-    if (!line) return { line: '', repeatCount: 1 };
-
-    // Normaliser quotes & apostrophes
-    line = line.replace(/[’‘`´]/g, "'").replace(/[“”«»]/g, '"');
-    // Retirer timestamps : [01:23.45], (02:14)
-    line = line.replace(/^\[?\d{1,2}:\d{2}(?:\.\d+)?\]?\s*/, '');
-    // Retirer numérotation de ligne : "1. ", "12) "
-    line = line.replace(/^\d+[\.\)\-]\s+/, '');
-
-    // Répétitions en fin de ligne : (x2), x2, (bis), etc.
-    let repeatCount = 1;
-    const repRegex = /\s*\(?(?:x\s*(\d+)|repeat\s*x?\s*(\d+)|\*(\d+)|bis)\)?\.?$/i;
-    const repMatch = line.match(repRegex);
-    if (repMatch) {
-      repeatCount = parseInt(repMatch[1] || repMatch[2] || repMatch[3] || '2', 10);
-      line = line.replace(repRegex, '').trim();
-      stats.repetitionsExpanded++;
-    }
-
-    // Ponctuation de fin de ligne : retirer virgules, points finaux, deux-points, points-virgules
-    // Conserver '?', '!', et '...'
-    const prevLen = line.length;
-    line = line.replace(/\.\.\./g, '___ELLIPSIS___');
-    line = line.replace(/[,;.:]+$/, '').trim();
-    line = line.replace(/___ELLIPSIS___/g, '...');
-    if (line.length !== prevLen) {
-      stats.punctuationCleaned++;
-    }
-
-    // Formater les ad-libs écrits avec des crochets ou étoiles : [skrrt] -> (Skrrt), *ouh* -> (Ouh)
-    line = line.replace(/\[([a-zA-Z\s!?,']+?)\]/g, (m, p) => {
-      if (p.length < 25 && !GENIUS_SECTION_MAP.some(s => s.match.test(p))) {
-        stats.adlibsCleaned++;
-        return `(${toTitleCase(p.trim())})`;
-      }
-      return m;
-    });
-
-    line = line.replace(/\*([a-zA-Z\s!?,']+?)\*/g, (m, p) => {
-      stats.adlibsCleaned++;
-      return `(${toTitleCase(p.trim())})`;
-    });
-
-    // Correction orthographique ciblée (si activée)
-    if (enableSpellcheck) {
-      line = correctLyricsSpelling(line, stats);
-    }
-
-    // Mettre une majuscule au premier mot des ad-libs entre parenthèses : (yeah, yeah) -> (Yeah, yeah)
-    line = line.replace(/\(([^)]+)\)/g, (m, inner) => {
-      const trimmed = inner.trim();
-      if (!trimmed) return m;
-      const capitalizedInner = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
-      return `(${capitalizedInner})`;
-    });
-
-    // Majuscule du mot suivant un ad-lib au début de la ligne : (Skrrt) j'accélère -> (Skrrt) J'accélère
-    line = line.replace(/^(\([^\)]+\)\s+)([a-zà-öø-ÿ])/i, (m, prefix, char) => {
-      stats.linesCapitalized++;
-      return prefix + char.toUpperCase();
-    });
-
-    // Majuscule obligatoire en début de ligne
-    if (line.length > 0) {
-      if (line.startsWith('(')) {
-        if (line.length > 1 && line.charAt(1) >= 'a' && line.charAt(1) <= 'z') {
-          line = '(' + line.charAt(1).toUpperCase() + line.slice(2);
-          stats.linesCapitalized++;
-        }
-      } else {
-        const first = line.charAt(0);
-        if (first >= 'a' && first <= 'z') {
-          line = first.toUpperCase() + line.slice(1);
-          stats.linesCapitalized++;
-        }
-      }
-    }
-
-    // Nettoyer les espaces multiples internes
-    line = line.replace(/[ \t]{2,}/g, ' ');
-
-    return { line, repeatCount };
-  }
-
-  function formatLyricsGeniusLocal(raw, options = {}) {
-    const enableSpellcheck = options.enableSpellcheck !== false;
-
-    if (!raw || !raw.trim()) {
-      return {
-        text: '',
-        stats: {
-          headersFormatted: 0,
-          linesCapitalized: 0,
-          punctuationCleaned: 0,
-          repetitionsExpanded: 0,
-          adlibsCleaned: 0,
-          spellingCorrected: 0
-        }
-      };
-    }
-
-    let stats = {
-      headersFormatted: 0,
-      linesCapitalized: 0,
-      punctuationCleaned: 0,
-      repetitionsExpanded: 0,
-      adlibsCleaned: 0,
-      spellingCorrected: 0
-    };
-
-    const linesRaw = raw.split(/\r?\n/);
-    const rawSections = [];
-    let curSection = {
-      header: null,
-      lines: [],
-      multiplier: 1,
-      isRefrain: false
-    };
-
-    let primaryRefrainLines = [];
-
-    for (let i = 0; i < linesRaw.length; i++) {
-      const trimmed = linesRaw[i].trim();
-      if (!trimmed) continue;
-
-      // Métadonnées à supprimer
-      if (/^(paroles|lyrics|compositeur|auteur|produced by|written by|source)[\s:]/i.test(trimmed)) {
-        continue;
-      }
-
-      // Est-ce un en-tête de section ?
-      const headerInfo = identifyGeniusHeader(trimmed);
-      if (headerInfo) {
-        stats.headersFormatted++;
-        if (curSection.header || curSection.lines.length > 0) {
-          rawSections.push(curSection);
-        }
-        curSection = {
-          header: headerInfo.formatted,
-          lines: [],
-          multiplier: headerInfo.multiplier || 1,
-          isRefrain: headerInfo.isRefrain
-        };
-        continue;
-      }
-
-      // Est-ce un rappel de refrain sans paroles ? Ex: "(Refrain)", "Repeat Chorus", "[Refrain]"
-      if (/^\(?\s*(?:repeat\s+)?(?:refrain|chorus|hook)\s*(?:x\s*\d+)?\s*\)?$/i.test(trimmed)) {
-        if (primaryRefrainLines.length > 0) {
-          curSection.lines.push(...primaryRefrainLines);
-          stats.repetitionsExpanded++;
-          continue;
-        }
-      }
-
-      // Ligne de parole individuelle
-      const { line: cleanLine, repeatCount } = cleanLyricLine(trimmed, stats, enableSpellcheck);
-      if (cleanLine) {
-        for (let r = 0; r < repeatCount; r++) {
-          curSection.lines.push(cleanLine);
-        }
-      }
-    }
-
-    if (curSection.header || curSection.lines.length > 0) {
-      rawSections.push(curSection);
-    }
-
-    // Référence du premier refrain non-vide
-    for (const s of rawSections) {
-      if (s.isRefrain && s.lines.length > 0) {
-        primaryRefrainLines = [...s.lines];
-        break;
-      }
-    }
-
-    // Injection automatique si un refrain ultérieur a été déclaré sans paroles
-    for (const s of rawSections) {
-      if (s.isRefrain && s.lines.length === 0 && primaryRefrainLines.length > 0) {
-        s.lines = [...primaryRefrainLines];
-        stats.repetitionsExpanded++;
-      }
-    }
-
-    // Assemblage final : 1 saut de ligne entre sections, 0 saut interne
-    const finalBlocks = [];
-    for (const s of rawSections) {
-      const blockLines = [];
-      if (s.header) {
-        blockLines.push(s.header);
-      }
-      const count = Math.max(1, s.multiplier || 1);
-      for (let m = 0; m < count; m++) {
-        blockLines.push(...s.lines);
-      }
-      if (blockLines.length > 0) {
-        finalBlocks.push(blockLines.join('\n'));
-      }
-    }
-
-    return {
-      text: finalBlocks.join('\n\n').trim(),
-      stats
-    };
+    return { text: raw, stats: {} };
   }
 
   function setGeniusState(state, outputText = '', stats = null) {
@@ -1778,12 +1256,7 @@ J'écris mes textes à la plume`;
     if (geniusStatsSummary) {
       if (state === 'output' && stats) {
         let summaryHtml = `
-          <div class="genius-stat-badge success">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
-            <span>Conforme Genius</span>
-          </div>
+          <div class="genius-stat-badge success"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span>Conforme Genius</span></div>
         `;
         if (stats.headersFormatted > 0) {
           summaryHtml += `<div class="genius-stat-badge highlight"><span>${stats.headersFormatted} section${stats.headersFormatted > 1 ? 's' : ''} [ ]</span></div>`;
@@ -1826,16 +1299,16 @@ J'écris mes textes à la plume`;
     localStorage.setItem(STORAGE_KEY_ACTIVE_TAB, tabId);
   }
 
-  // --- Initialisation générale ---
+  // --- General Initialization ---
   function init() {
     loadStoredData();
     songTitleInput.value = currentSong.title || '';
     activeLineIndex = 0;
 
-    // Titre de chanson
+    // Song title auto-save
     songTitleInput.addEventListener('input', scheduleAutoSave);
 
-    // Dropdown Export
+    // Export dropdown
     btnExportMenu.addEventListener('click', (e) => {
       e.stopPropagation();
       exportDropdown.classList.toggle('open');
@@ -1873,7 +1346,7 @@ J'écris mes textes à la plume`;
       }
     });
 
-    // Modal Projets
+    // Projects modal
     btnOpenProjects.addEventListener('click', openProjectsModal);
     btnCloseModal.addEventListener('click', closeProjectsModal);
     projectsModal.addEventListener('click', (e) => {
@@ -1895,9 +1368,9 @@ J'écris mes textes à la plume`;
       }
     });
 
-    // Raccourcis globaux
+    // Global keyboard shortcuts
     document.addEventListener('keydown', (e) => {
-      // Raccourcis Undo / Redo globaux
+      // Global Undo / Redo shortcuts
       const isZ = (e.key === 'z' || e.key === 'Z');
       const isY = (e.key === 'y' || e.key === 'Y');
 
@@ -1933,14 +1406,14 @@ J'écris mes textes à la plume`;
           showToast('Mode Zen désactivé');
           return;
         }
-        // Touche Echap pour fermer les modals et dropdowns
+        // Escape key to close modals and dropdowns
         if (shortcutsModal) shortcutsModal.classList.remove('open');
         if (projectsModal) closeProjectsModal();
         if (exportDropdown) exportDropdown.classList.remove('open');
       }
     });
 
-    // Mode Zen (Focus plein écran Alt+Z)
+    // Zen Mode (Fullscreen focus Alt+Z)
     const btnZenMode = document.getElementById('btnZenMode');
     function toggleZenMode() {
       const isZen = document.body.classList.toggle('zen-mode');
@@ -1954,7 +1427,7 @@ J'écris mes textes à la plume`;
       btnZenMode.addEventListener('click', toggleZenMode);
     }
 
-    // Modal Raccourcis Clavier
+    // Keyboard Shortcuts Modal
     const btnOpenShortcuts = document.getElementById('btnOpenShortcuts');
     const shortcutsModal = document.getElementById('shortcutsModal');
     const btnCloseShortcutsModal = document.getElementById('btnCloseShortcutsModal');
@@ -1979,20 +1452,20 @@ J'écris mes textes à la plume`;
       });
     }
 
-    // Tabs Navigation
+    // Tab navigation
     tabBtnStudio.addEventListener('click', () => switchTab('studio'));
     tabBtnGenius.addEventListener('click', () => switchTab('genius'));
     const savedTab = localStorage.getItem(STORAGE_KEY_ACTIVE_TAB) || 'studio';
     switchTab(savedTab);
 
-    // Toggle Guide d'écriture Genius (déplié de base)
+    // Genius Writing Guide toggle (expanded by default)
     const geniusGuideWrapper = document.getElementById('geniusGuideWrapper');
     const geniusGuideHeader = document.getElementById('geniusGuideHeader');
     const btnGeniusLoadExample = document.getElementById('btnGeniusLoadExample');
 
     if (geniusGuideHeader && geniusGuideWrapper) {
       geniusGuideHeader.addEventListener('click', (e) => {
-        if (e.target.closest('#btnGeniusLoadExample')) return;
+        if (e.target.closest('#btnGeniusLoadExample') || e.target.closest('.genius-actions')) return;
         geniusGuideWrapper.classList.toggle('collapsed');
       });
     }
@@ -2023,14 +1496,12 @@ mon equipe avance pas a pas x2
 Refrain`;
 
         geniusInputLyrics.value = exampleSong;
-        const len = exampleSong.length;
-        geniusCharCount.textContent = `${len} caractère${len > 1 ? 's' : ''}`;
         if (btnGeniusFormat) btnGeniusFormat.disabled = false;
         showToast('Exemple type chargé dans les paroles brutes !');
       });
     }
 
-    // Toggle Affichage Décomposition des pieds Studio (persistance localStorage)
+    // Syllable breakdown toggle (localStorage persistence)
     const checkShowBreakdown = document.getElementById('checkShowBreakdown');
     if (checkShowBreakdown) {
       const savedBreakdown = localStorage.getItem(STORAGE_KEY_SHOW_BREAKDOWN);
@@ -2046,7 +1517,7 @@ Refrain`;
       });
     }
 
-    // Toggle Correction Orthographique (persistance localStorage)
+    // Spellcheck toggle (localStorage persistence)
     const checkGeniusSpellcheck = document.getElementById('checkGeniusSpellcheck');
     const STORAGE_KEY_GENIUS_SPELLCHECK = 'lyrr_genius_spellcheck';
     if (checkGeniusSpellcheck) {
@@ -2059,10 +1530,44 @@ Refrain`;
       });
     }
 
-    // Genius Optimizer Handlers
+    // Genius Optimizer event handlers
+    geniusInputLyrics.addEventListener('keydown', (e) => {
+      const isParen = (e.key === '(' || e.key === ')');
+      if (isParen && !e.altKey && !e.ctrlKey && !e.metaKey) {
+        const start = geniusInputLyrics.selectionStart;
+        const end = geniusInputLyrics.selectionEnd;
+        if (start < end) {
+          e.preventDefault();
+          const val = geniusInputLyrics.value;
+          const selected = val.slice(start, end);
+          geniusInputLyrics.setRangeText(`(${selected})`, start, end, 'select');
+          geniusInputLyrics.setSelectionRange(start + 1, end + 1);
+          if (btnGeniusFormat) btnGeniusFormat.disabled = false;
+        } else if (e.key === '(') {
+          e.preventDefault();
+          const startPos = geniusInputLyrics.selectionStart;
+          geniusInputLyrics.setRangeText('()', startPos, startPos, 'end');
+          geniusInputLyrics.setSelectionRange(startPos + 1, startPos + 1);
+          if (btnGeniusFormat) btnGeniusFormat.disabled = false;
+        } else if (e.key === ')' && geniusInputLyrics.value.charAt(start) === ')') {
+          e.preventDefault();
+          geniusInputLyrics.setSelectionRange(start + 1, start + 1);
+        }
+      } else if (e.key === 'Backspace' && !e.altKey && !e.ctrlKey && !e.metaKey) {
+        const start = geniusInputLyrics.selectionStart;
+        const end = geniusInputLyrics.selectionEnd;
+        if (start === end && start > 0) {
+          const val = geniusInputLyrics.value;
+          if (val.charAt(start - 1) === '(' && val.charAt(start) === ')') {
+            e.preventDefault();
+            geniusInputLyrics.setRangeText('', start - 1, start + 1, 'end');
+            geniusInputLyrics.setSelectionRange(start - 1, start - 1);
+          }
+        }
+      }
+    });
+
     geniusInputLyrics.addEventListener('input', () => {
-      const len = geniusInputLyrics.value.length;
-      geniusCharCount.textContent = `${len} caractère${len > 1 ? 's' : ''}`;
       if (btnGeniusFormat) {
         btnGeniusFormat.disabled = !geniusInputLyrics.value.trim();
       }
@@ -2070,7 +1575,6 @@ Refrain`;
 
     btnGeniusClear.addEventListener('click', () => {
       geniusInputLyrics.value = '';
-      geniusCharCount.textContent = '0 caractères';
       setGeniusState('empty');
     });
 
@@ -2081,8 +1585,6 @@ Refrain`;
         return;
       }
       geniusInputLyrics.value = studioText;
-      const len = studioText.length;
-      geniusCharCount.textContent = `${len} caractère${len > 1 ? 's' : ''}`;
       if (btnGeniusFormat) btnGeniusFormat.disabled = false;
       showToast('Paroles importées depuis le Studio !');
     });
@@ -2135,7 +1637,7 @@ Refrain`;
       }
     });
 
-    // Formatage Instantané Local (Moteur Senior Genius)
+    // Instant Local Formatting (Senior Genius Engine)
     btnGeniusFormat.addEventListener('click', () => {
       const raw = geniusInputLyrics.value.trim();
       if (!raw) {

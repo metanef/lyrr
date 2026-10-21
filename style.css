@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Lyrr - Studio de Paroles & Compteur de Syllabes
+   Lyrr - Lyrics Studio & Syllable Counter
    Design : Modern Studio Dark Glassmorphism (Line-by-Line Architecture)
    ========================================================================== */
 
@@ -16,7 +16,7 @@
   --text-muted: #94a3b8;
   --text-dim: #64748b;
 
-  /* Palette des pieds / mesures */
+  /* Syllable meter palette */
   --accent-cyan: #06b6d4;
   --accent-purple: #a855f7;
   --accent-indigo: #6366f1;
@@ -41,14 +41,22 @@
   padding: 0;
 }
 
-html, body {
+html,
+body {
   height: 100vh;
   max-height: 100vh;
   overflow: hidden;
 }
 
 body {
-  font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family:
+    "Plus Jakarta Sans",
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
   background-color: var(--bg-primary);
   color: var(--text-main);
   display: flex;
@@ -62,10 +70,22 @@ body {
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  background: 
-    radial-gradient(circle at 15% 15%, rgba(99, 102, 241, 0.12) 0%, transparent 45%),
-    radial-gradient(circle at 85% 75%, rgba(168, 85, 247, 0.10) 0%, transparent 50%),
-    radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.05) 0%, transparent 60%);
+  background:
+    radial-gradient(
+      circle at 15% 15%,
+      rgba(99, 102, 241, 0.12) 0%,
+      transparent 45%
+    ),
+    radial-gradient(
+      circle at 85% 75%,
+      rgba(168, 85, 247, 0.1) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(6, 182, 212, 0.05) 0%,
+      transparent 60%
+    );
 }
 
 /* Header */
@@ -97,7 +117,11 @@ body {
   width: 38px;
   height: 38px;
   border-radius: var(--radius-md);
-  background: linear-gradient(135deg, var(--accent-indigo), var(--accent-purple));
+  background: linear-gradient(
+    135deg,
+    var(--accent-indigo),
+    var(--accent-purple)
+  );
   color: #fff;
   box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
 }
@@ -365,8 +389,6 @@ body {
   display: flex;
 }
 
-
-
 /* Tab Panes */
 .tab-pane {
   display: none !important;
@@ -465,7 +487,7 @@ body {
 }
 
 .status-metrics {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-size: 11px;
   color: var(--text-muted);
   letter-spacing: 0.2px;
@@ -504,7 +526,11 @@ body {
 }
 
 .studio-toggle input[type="checkbox"]:checked + .toggle-switch-slider {
-  background: linear-gradient(135deg, var(--accent-indigo), var(--accent-purple));
+  background: linear-gradient(
+    135deg,
+    var(--accent-indigo),
+    var(--accent-purple)
+  );
 }
 
 .studio-toggle input[type="checkbox"]:checked + .toggle-switch-slider::after {
@@ -522,7 +548,7 @@ body {
 .editor-lines-container {
   flex: 1;
   min-height: 0;
-  overflow-y: scroll !important; /* Barre de défilement toujours présente et accessible */
+  overflow-y: scroll !important; /* Scrollbar always visible and accessible */
   overflow-x: hidden;
   scrollbar-width: thin;
   scrollbar-color: rgba(99, 102, 241, 0.65) rgba(11, 15, 26, 0.8);
@@ -588,12 +614,15 @@ body {
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-size: 12px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.28) !important;
   cursor: pointer;
-  transition: color var(--transition-fast), transform var(--transition-fast), text-shadow var(--transition-fast);
+  transition:
+    color var(--transition-fast),
+    transform var(--transition-fast),
+    text-shadow var(--transition-fast);
   padding: 0;
   margin: 0;
 }
@@ -603,16 +632,18 @@ body {
   transform: scale(1.15);
 }
 
-/* Badge de pieds sur la ligne active : flashy vibrant violet neon glow */
+/* Syllable badge on active line: flashy vibrant violet neon glow */
 .line-row.active .syllable-badge:not(.empty):not(.tag-badge) {
   color: #c084fc !important;
   font-size: 13px !important;
   font-weight: 800 !important;
-  text-shadow: 0 0 10px rgba(192, 132, 252, 0.75), 0 0 20px rgba(168, 85, 247, 0.4) !important;
+  text-shadow:
+    0 0 10px rgba(192, 132, 252, 0.75),
+    0 0 20px rgba(168, 85, 247, 0.4) !important;
   transform: scale(1.08);
 }
 
-/* Input d'ajustement direct des pieds dans la marge */
+/* Inline syllable count adjustment input in gutter */
 .badge-edit-input {
   width: 28px;
   height: 22px;
@@ -621,7 +652,7 @@ body {
   border: 1.5px solid var(--accent-indigo);
   border-radius: 4px;
   text-align: center;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-size: 11px;
   font-weight: 800;
   outline: none;
@@ -658,7 +689,7 @@ body {
   cursor: default;
 }
 
-/* Main Line Area (Input texte + jetons de pieds sur la même ligne horizontale) */
+/* Main Line Area (Text input + syllable breakdown tokens in a single line) */
 .line-main {
   flex: 1;
   display: flex;
@@ -755,7 +786,7 @@ body {
 }
 
 .chip-count {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-size: 9.5px;
   font-weight: 700;
   color: rgba(192, 132, 252, 0.8);
@@ -784,7 +815,11 @@ body {
   border: none;
   outline: none;
   color: var(--text-main);
-  font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif;
+  font-family:
+    "Plus Jakarta Sans",
+    "Inter",
+    -apple-system,
+    sans-serif;
   font-size: 16px;
   caret-color: var(--accent-indigo);
   padding: 0 4px;
@@ -793,7 +828,6 @@ body {
   cursor: text;
   transition: background var(--transition-fast);
 }
-
 
 .line-input:focus {
   background: rgba(255, 255, 255, 0.03);
@@ -873,7 +907,7 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
-  margin-bottom: 16px;
+  margin-bottom: 0;
 }
 
 .shortcut-group-title {
@@ -911,7 +945,7 @@ body {
 }
 
 .kbd {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-size: 11px;
   font-weight: 700;
   background: rgba(255, 255, 255, 0.1);
@@ -1112,9 +1146,9 @@ body {
   gap: 8px;
   cursor: pointer;
   user-select: none;
-  background: rgba(22, 30, 51, 0.6);
-  border: 1px solid var(--border-subtle);
-  padding: 6px 11px;
+  background: transparent;
+  border: none;
+  padding: 4px 6px;
   border-radius: var(--radius-md);
   font-size: 11.5px;
   font-weight: 600;
@@ -1123,8 +1157,8 @@ body {
 }
 
 .genius-spellcheck-toggle:hover {
-  background: rgba(22, 30, 51, 0.9);
-  border-color: rgba(250, 204, 21, 0.3);
+  background: transparent;
+  border-color: transparent;
   color: var(--text-main);
 }
 
@@ -1143,7 +1177,7 @@ body {
 }
 
 .toggle-switch-slider::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 2px;
   left: 2px;
@@ -1154,11 +1188,15 @@ body {
   transition: transform var(--transition-fast);
 }
 
-.genius-spellcheck-toggle input[type="checkbox"]:checked + .toggle-switch-slider {
+.genius-spellcheck-toggle
+  input[type="checkbox"]:checked
+  + .toggle-switch-slider {
   background: #facc15;
 }
 
-.genius-spellcheck-toggle input[type="checkbox"]:checked + .toggle-switch-slider::after {
+.genius-spellcheck-toggle
+  input[type="checkbox"]:checked
+  + .toggle-switch-slider::after {
   transform: translateX(12px);
   background: #000;
 }
@@ -1230,15 +1268,6 @@ body {
   color: #10b981;
 }
 
-.genius-char-count {
-  font-size: 11px;
-  font-family: 'JetBrains Mono', monospace;
-  background: rgba(255, 255, 255, 0.06);
-  padding: 2px 7px;
-  border-radius: var(--radius-sm);
-  color: var(--text-dim);
-}
-
 .genius-output-tools {
   display: flex;
   align-items: center;
@@ -1273,7 +1302,7 @@ body {
   border-radius: var(--radius-lg);
   padding: 16px 18px;
   color: #fff;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-size: 13px;
   line-height: 1.6;
   resize: none;
@@ -1337,7 +1366,7 @@ body {
 
 .empty-badge {
   font-size: 11px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-weight: 600;
   color: #facc15;
   background: rgba(250, 204, 21, 0.12);
@@ -1365,7 +1394,7 @@ body {
   align-items: center;
   gap: 5px;
   font-size: 11px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-weight: 600;
   color: var(--text-dim);
   background: rgba(255, 255, 255, 0.05);
@@ -1386,77 +1415,14 @@ body {
   border-color: rgba(250, 204, 21, 0.3);
 }
 
-.genius-state-loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  text-align: center;
-  padding: 40px 20px;
-  gap: 12px;
-  animation: pulseOpacity 1.6s ease-in-out infinite;
-}
-
-.wand-spinner {
-  color: #facc15;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  filter: drop-shadow(0 0 12px rgba(250, 204, 21, 0.6));
-}
-
-@keyframes pulseOpacity {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
-}
-
-.loading-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: #fff;
-  margin: 0;
-}
-
-.loading-sub {
-  font-size: 12px;
-  color: var(--text-dim);
-  margin: 0;
-}
-
 .genius-pre {
   margin: 0;
   white-space: pre-wrap;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-size: 13px;
   line-height: 1.6;
   color: #f8fafc;
   user-select: text;
-}
-
-.genius-error-box {
-  background: rgba(244, 63, 94, 0.12);
-  border: 1px solid rgba(244, 63, 94, 0.35);
-  border-radius: var(--radius-md);
-  padding: 14px;
-  color: #fda4af;
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  margin-top: auto;
-}
-
-.genius-error-box strong {
-  display: block;
-  font-size: 13px;
-  color: #fff;
-  margin-bottom: 2px;
-}
-
-.genius-error-box p {
-  font-size: 12px;
-  margin: 0;
-  line-height: 1.4;
 }
 
 /* Collapsible Genius Syntax Guide Banner */
@@ -1478,52 +1444,46 @@ body {
   justify-content: space-between;
   padding: 8px 14px;
   background: rgba(22, 30, 51, 0.45);
-  cursor: pointer;
   user-select: none;
   border-bottom: 1px solid var(--border-subtle);
-  transition: background var(--transition-fast), border-color var(--transition-fast);
-}
-
-.genius-guide-header:hover {
-  background: rgba(22, 30, 51, 0.75);
+  gap: 12px;
+  flex-wrap: wrap;
+  transition: border-color var(--transition-fast);
 }
 
 .genius-guide-wrapper.collapsed .genius-guide-header {
   border-bottom-color: transparent;
 }
 
-.genius-guide-header-left {
+.genius-guide-header-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+}
+
+.genius-guide-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 11px;
   font-weight: 700;
   color: #facc15;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-}
-
-.genius-guide-icon {
-  color: #facc15;
-  flex-shrink: 0;
-}
-
-.genius-guide-toggle-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-dim);
   cursor: pointer;
-  padding: 3px 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  padding: 4px 8px;
   border-radius: var(--radius-sm);
   transition: all var(--transition-fast);
 }
 
-.genius-guide-header:hover .genius-guide-toggle-btn {
-  color: var(--text-main);
-  background: rgba(255, 255, 255, 0.06);
+.genius-guide-trigger:hover {
+  background: rgba(250, 204, 21, 0.12);
+  color: #fde047;
+}
+
+.genius-guide-trigger .chevron-icon {
+  color: inherit;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .genius-guide-wrapper .chevron-icon {
@@ -1540,9 +1500,10 @@ body {
   max-height: 500px;
   opacity: 1;
   overflow: hidden;
-  transition: max-height 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-              opacity 0.2s ease,
-              padding 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    max-height 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.2s ease,
+    padding 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .genius-guide-wrapper.collapsed .genius-guide-content {
@@ -1555,8 +1516,8 @@ body {
 
 .syntax-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
 }
 
 .syntax-card {
@@ -1567,7 +1528,9 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  transition: border-color var(--transition-fast), background var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast);
 }
 
 .syntax-card:hover {
@@ -1610,7 +1573,7 @@ body {
 }
 
 .syntax-row code {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   background: rgba(255, 255, 255, 0.08);
   padding: 1px 4px;
   border-radius: 3px;
@@ -1626,7 +1589,7 @@ body {
 }
 
 .syntax-tag {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-size: 10.5px;
   font-weight: 600;
   color: #facc15;
@@ -1687,4 +1650,3 @@ body.zen-mode .editor-lines-container {
   padding: 48px 36px 140px 24px !important;
   background: transparent !important;
 }
-
