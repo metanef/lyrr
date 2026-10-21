@@ -77,6 +77,8 @@ Aucune installation, aucun serveur ni dépendance :
 - `Alt + D` : Supprimer la ligne active
 - `Alt + ↑ / ↓` : Déplacer la ligne vers le haut ou le bas
 - `Alt + Z` : Mode Zen plein écran
+- `Ctrl + Z` : Annuler la dernière action (Undo)
+- `Ctrl + Y` (ou `Ctrl + Maj + Z`) : Rétablir l'action annulée (Redo)
 - `Ctrl + S` : Sauvegarde manuelle immédiate
 - `Échap` : Quitter le mode Zen / fermer les fenêtres modales
 
@@ -94,6 +96,7 @@ Aucune installation, aucun serveur ni dépendance :
 - [x] **Décomposition syllabique sur la ligne active** : affichage typographique avec sous-découpe (`·`) et compteurs discrets
 - [x] **Mode Zen plein écran (`Alt + Z`)** : écriture sans distraction avec masquage des menus
 - [x] **Barre de statut basse** : vers, total pieds, moyenne et interrupteur détail
+- [x] **Annuler / Rétablir (Undo / Redo)** : pile d'historique complète (`Ctrl + Z` et `Ctrl + Y`)
 - [x] **Onglet Genius Lyrics Optimizer 100% Local & Instantané** (normalisation, duplication des refrains/répétitions, ponctuation, majuscules)
 - [x] **Synchronisation bidirectionnelle Studio ↔ Genius**
 - [x] **Sauvegarde locale automatique** (`localStorage`) pour ne jamais perdre ses sessions

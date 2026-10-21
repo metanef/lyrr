@@ -87,6 +87,14 @@
   let editingBadgeIndex = null;
   let saveTimeout = null;
 
+  // --- Gestion de l'historique Annuler / Rétablir (Undo / Redo) ---
+  const MAX_HISTORY = 80;
+  let undoStack = [];
+  let redoStack = [];
+  let isTypingBurst = false;
+  let typingBurstTimer = null;
+  let isPerformingUndoRedo = false;
+
   const DEFAULT_LYRICS = 
 `Je suis heureux
 PDG
@@ -136,6 +144,122 @@ J'écris mes textes à la plume`;
     } catch (e) {
       console.error('Erreur sauvegarde locale', e);
       showSaveStatus(false);
+    }
+  }
+
+  // --- Fonctions d'historique (Undo / Redo) ---
+  function getActiveCaretPos() {
+    if (activeLineIndex === null || !editorLinesContainer) return 0;
+    const activeInput = editorLinesContainer.querySelector(`.line-input[data-index="${activeLineIndex}"]`);
+    return activeInput ? activeInput.selectionStart : 0;
+  }
+
+  function createSnapshot() {
+    return {
+      lines: lines.slice(),
+      overrides: currentSong && currentSong.overrides ? { ...currentSong.overrides } : {},
+      activeLineIndex: activeLineIndex,
+      caretPos: getActiveCaretPos()
+    };
+  }
+
+  function areSnapshotsEqual(s1, s2) {
+    if (!s1 || !s2) return false;
+    if (s1.lines.length !== s2.lines.length) return false;
+    for (let i = 0; i < s1.lines.length; i++) {
+      if (s1.lines[i] !== s2.lines[i]) return false;
+    }
+    const o1 = s1.overrides || {};
+    const o2 = s2.overrides || {};
+    const k1 = Object.keys(o1);
+    const k2 = Object.keys(o2);
+    if (k1.length !== k2.length) return false;
+    for (const k of k1) {
+      if (o1[k] !== o2[k]) return false;
+    }
+    return true;
+  }
+
+  function pushUndoSnapshot(snapshot = null) {
+    if (isPerformingUndoRedo) return;
+    const snap = snapshot || createSnapshot();
+    if (undoStack.length > 0 && areSnapshotsEqual(undoStack[undoStack.length - 1], snap)) {
+      return;
+    }
+    undoStack.push(snap);
+    if (undoStack.length > MAX_HISTORY) undoStack.shift();
+    redoStack = [];
+  }
+
+  function performUndo() {
+    if (isTypingBurst) {
+      isTypingBurst = false;
+      clearTimeout(typingBurstTimer);
+    }
+    if (editingBadgeIndex !== null) {
+      cancelBadgeEdit();
+    }
+    if (undoStack.length === 0) {
+      showToast('Rien à annuler');
+      return;
+    }
+
+    const currentState = createSnapshot();
+    redoStack.push(currentState);
+    if (redoStack.length > MAX_HISTORY) redoStack.shift();
+
+    const previousState = undoStack.pop();
+    isPerformingUndoRedo = true;
+    try {
+      lines = previousState.lines.slice();
+      if (currentSong) {
+        currentSong.overrides = { ...previousState.overrides };
+        currentSong.content = lines.join('\n');
+      }
+      activeLineIndex = previousState.activeLineIndex !== null
+        ? Math.min(Math.max(0, previousState.activeLineIndex), lines.length - 1)
+        : 0;
+      scheduleAutoSave();
+      renderAllLines(activeLineIndex, previousState.caretPos);
+      showToast('Annuler (Ctrl+Z)');
+    } finally {
+      isPerformingUndoRedo = false;
+    }
+  }
+
+  function performRedo() {
+    if (isTypingBurst) {
+      isTypingBurst = false;
+      clearTimeout(typingBurstTimer);
+    }
+    if (editingBadgeIndex !== null) {
+      cancelBadgeEdit();
+    }
+    if (redoStack.length === 0) {
+      showToast('Rien à rétablir');
+      return;
+    }
+
+    const currentState = createSnapshot();
+    undoStack.push(currentState);
+    if (undoStack.length > MAX_HISTORY) undoStack.shift();
+
+    const nextState = redoStack.pop();
+    isPerformingUndoRedo = true;
+    try {
+      lines = nextState.lines.slice();
+      if (currentSong) {
+        currentSong.overrides = { ...nextState.overrides };
+        currentSong.content = lines.join('\n');
+      }
+      activeLineIndex = nextState.activeLineIndex !== null
+        ? Math.min(Math.max(0, nextState.activeLineIndex), lines.length - 1)
+        : 0;
+      scheduleAutoSave();
+      renderAllLines(activeLineIndex, nextState.caretPos);
+      showToast('Rétablir (Ctrl+Y)');
+    } finally {
+      isPerformingUndoRedo = false;
     }
   }
 
@@ -328,6 +452,7 @@ J'écris mes textes à la plume`;
     if (trimmed === '') {
       // Si le champ est vidé : on supprime l'override pour rétablir le calcul automatique
       if (currentSong && currentSong.overrides && currentSong.overrides[lineIndex] !== undefined) {
+        pushUndoSnapshot();
         delete currentSong.overrides[lineIndex];
         scheduleAutoSave();
         showToast(`Ligne ${lineIndex + 1} : calcul automatique rétabli`);
@@ -336,9 +461,12 @@ J'écris mes textes à la plume`;
       const val = parseInt(trimmed, 10);
       if (!isNaN(val) && val >= 0) {
         if (!currentSong.overrides) currentSong.overrides = {};
-        currentSong.overrides[lineIndex] = val;
-        scheduleAutoSave();
-        showToast(`Ligne ${lineIndex + 1} fixée à ${val} pieds`);
+        if (currentSong.overrides[lineIndex] !== val) {
+          pushUndoSnapshot();
+          currentSong.overrides[lineIndex] = val;
+          scheduleAutoSave();
+          showToast(`Ligne ${lineIndex + 1} fixée à ${val} pieds`);
+        }
       }
     }
 
@@ -398,6 +526,17 @@ J'écris mes textes à la plume`;
       if (!input) return;
 
       const index = parseInt(input.dataset.index, 10);
+
+      // Gestion du burst de frappe pour l'historique Undo
+      if (!isTypingBurst) {
+        pushUndoSnapshot();
+        isTypingBurst = true;
+      }
+      clearTimeout(typingBurstTimer);
+      typingBurstTimer = setTimeout(() => {
+        isTypingBurst = false;
+      }, 700);
+
       lines[index] = input.value;
       scheduleAutoSave();
 
@@ -535,6 +674,32 @@ J'écris mes textes à la plume`;
       const end = input.selectionEnd;
 
       // ======================================================================
+      // ANNULER / RÉTABLIR (Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z)
+      // ======================================================================
+      if ((e.ctrlKey || e.metaKey) && !e.altKey) {
+        const isZ = (e.key === 'z' || e.key === 'Z');
+        const isY = (e.key === 'y' || e.key === 'Y');
+
+        if (isZ && !e.shiftKey) {
+          e.preventDefault();
+          performUndo();
+          return;
+        }
+
+        if (isY || (isZ && e.shiftKey)) {
+          e.preventDefault();
+          performRedo();
+          return;
+        }
+      }
+
+      // Espace : valider le bloc de frappe actuel pour le prochain Undo
+      if (e.key === ' ') {
+        isTypingBurst = false;
+        clearTimeout(typingBurstTimer);
+      }
+
+      // ======================================================================
       // RACCOURCIS CLAVIER RAPIDES (Tags de structure, Ad-libs, Édition)
       // ======================================================================
 
@@ -570,6 +735,10 @@ J'écris mes textes à la plume`;
 
         if (tag) {
           e.preventDefault();
+          isTypingBurst = false;
+          clearTimeout(typingBurstTimer);
+          pushUndoSnapshot();
+
           if (!val.trim()) {
             // Ligne vide : devient le tag, et crée une ligne vide en-dessous prête à écrire
             lines[index] = tag;
@@ -592,6 +761,9 @@ J'écris mes textes à la plume`;
       // ALT + A : Formater en Ad-lib (entourer de parenthèses)
       if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === 'a' || e.key === 'A')) {
         e.preventDefault();
+        isTypingBurst = false;
+        clearTimeout(typingBurstTimer);
+        pushUndoSnapshot();
         if (start < end) {
           const selected = val.slice(start, end);
           const wrapped = `(${selected})`;
@@ -621,6 +793,9 @@ J'écris mes textes à la plume`;
       // TOUCHE '(' : si du texte est sélectionné, entourer automatiquement (style VS Code)
       if (e.key === '(' && start < end && !e.altKey && !e.ctrlKey && !e.metaKey) {
         e.preventDefault();
+        isTypingBurst = false;
+        clearTimeout(typingBurstTimer);
+        pushUndoSnapshot();
         const selected = val.slice(start, end);
         const wrapped = `(${selected})`;
         lines[index] = val.slice(0, start) + wrapped + val.slice(end);
@@ -632,6 +807,9 @@ J'écris mes textes à la plume`;
       // ALT + X : Répétition rapide (x2) en fin de ligne
       if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === 'x' || e.key === 'X')) {
         e.preventDefault();
+        isTypingBurst = false;
+        clearTimeout(typingBurstTimer);
+        pushUndoSnapshot();
         const trimmed = val.trim();
         if (/\s*\(x2\)$/i.test(trimmed)) {
           lines[index] = trimmed.replace(/\s*\(x2\)$/i, '');
@@ -647,6 +825,9 @@ J'écris mes textes à la plume`;
       // ALT + D : Supprimer rapidement la ligne courante
       if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === 'd' || e.key === 'D')) {
         e.preventDefault();
+        isTypingBurst = false;
+        clearTimeout(typingBurstTimer);
+        pushUndoSnapshot();
         if (lines.length > 1) {
           lines.splice(index, 1);
           if (currentSong && currentSong.overrides) {
@@ -675,6 +856,9 @@ J'écris mes textes à la plume`;
       if (e.altKey && !e.ctrlKey && !e.metaKey && e.key === 'ArrowUp') {
         if (index > 0) {
           e.preventDefault();
+          isTypingBurst = false;
+          clearTimeout(typingBurstTimer);
+          pushUndoSnapshot();
           const temp = lines[index];
           lines[index] = lines[index - 1];
           lines[index - 1] = temp;
@@ -698,6 +882,9 @@ J'écris mes textes à la plume`;
       if (e.altKey && !e.ctrlKey && !e.metaKey && e.key === 'ArrowDown') {
         if (index < lines.length - 1) {
           e.preventDefault();
+          isTypingBurst = false;
+          clearTimeout(typingBurstTimer);
+          pushUndoSnapshot();
           const temp = lines[index];
           lines[index] = lines[index + 1];
           lines[index + 1] = temp;
@@ -720,6 +907,9 @@ J'écris mes textes à la plume`;
       // TOUCHE ENTRÉE : couper la ligne et créer une nouvelle ligne en-dessous
       if (e.key === 'Enter') {
         e.preventDefault();
+        isTypingBurst = false;
+        clearTimeout(typingBurstTimer);
+        pushUndoSnapshot();
         const left = val.slice(0, start);
         const right = val.slice(end);
         lines[index] = left;
@@ -734,6 +924,9 @@ J'écris mes textes à la plume`;
       if (e.key === 'Backspace' && start === 0 && end === 0) {
         if (index > 0) {
           e.preventDefault();
+          isTypingBurst = false;
+          clearTimeout(typingBurstTimer);
+          pushUndoSnapshot();
           const prevLen = lines[index - 1].length;
           lines[index - 1] += val;
           lines.splice(index, 1);
@@ -759,6 +952,9 @@ J'écris mes textes à la plume`;
       if (e.key === 'Delete' && start === val.length && end === val.length) {
         if (index < lines.length - 1) {
           e.preventDefault();
+          isTypingBurst = false;
+          clearTimeout(typingBurstTimer);
+          pushUndoSnapshot();
           lines[index] += lines[index + 1];
           lines.splice(index + 1, 1);
 
@@ -809,6 +1005,9 @@ J'écris mes textes à la plume`;
       if (!pastedText || !pastedText.includes('\n')) return; // Laisser le comportement par défaut si une seule ligne
 
       e.preventDefault();
+      isTypingBurst = false;
+      clearTimeout(typingBurstTimer);
+      pushUndoSnapshot();
       const index = parseInt(input.dataset.index, 10);
       const val = input.value;
       const start = input.selectionStart;
@@ -1024,6 +1223,11 @@ J'écris mes textes à la plume`;
     lines = (currentSong.content || '').split('\n');
     if (lines.length === 0) lines = [''];
     activeLineIndex = 0;
+
+    undoStack = [];
+    redoStack = [];
+    isTypingBurst = false;
+    clearTimeout(typingBurstTimer);
 
     renderAllLines(0, 0);
     closeProjectsModal();
@@ -1661,6 +1865,7 @@ J'écris mes textes à la plume`;
     btnClearText.addEventListener('click', () => {
       exportDropdown.classList.remove('open');
       if (confirm('Effacer tout le texte de ce projet ?')) {
+        pushUndoSnapshot();
         lines = [''];
         if (currentSong) currentSong.overrides = {};
         scheduleAutoSave();
@@ -1692,6 +1897,25 @@ J'écris mes textes à la plume`;
 
     // Raccourcis globaux
     document.addEventListener('keydown', (e) => {
+      // Raccourcis Undo / Redo globaux
+      const isZ = (e.key === 'z' || e.key === 'Z');
+      const isY = (e.key === 'y' || e.key === 'Y');
+
+      if ((e.ctrlKey || e.metaKey) && !e.altKey) {
+        if (!e.target || e.target.id !== 'geniusInputLyrics') {
+          if (isZ && !e.shiftKey) {
+            e.preventDefault();
+            performUndo();
+            return;
+          }
+          if (isY || (isZ && e.shiftKey)) {
+            e.preventDefault();
+            performRedo();
+            return;
+          }
+        }
+      }
+
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
         if (currentSong) {
@@ -1867,6 +2091,7 @@ Refrain`;
       const output = geniusOutputLyrics.textContent.trim();
       if (!output) return;
       if (currentSong) {
+        pushUndoSnapshot();
         currentSong.content = output;
         lines = output.split('\n');
         if (lines.length === 0) lines = [''];
